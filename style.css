@@ -252,73 +252,75 @@ header {
   transform: translateY(-2px);
 }
 
-.ai-response {
-  background: #f7fafc;
-  padding: 1.5rem;
-  border-radius: 12px;
-  margin-bottom: 1.5rem;
-  border: 1px solid #e2e8f0;
-  white-space: pre-wrap;
-}
-
-.code-editor {
-  margin-top: 1.5rem;
-}
-
-.file-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.file-tab {
-  padding: 0.5rem 1rem;
-  background: #e2e8f0;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  color: #4a5568;
-}
-
-.file-tab.active {
-  background: #667eea;
-  color: white;
-}
-
-.file-content {
-  display: none;
-  background: #1a202c;
-  border-radius: 12px;
-  padding: 1.5rem;
-  color: #e2e8f0;
-  font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
+.chat-container {
   max-height: 500px;
   overflow-y: auto;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f7fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.chat-bubble {
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  max-width: 80%;
   white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
-.file-content.active {
-  display: block;
+.chat-bubble.user {
+  background: #667eea;
+  color: white;
+  margin-left: auto;
 }
 
-#codeOutput::-webkit-scrollbar {
+.chat-bubble.ai {
+  background: #e2e8f0;
+  color: #333;
+}
+
+.follow-up-input {
+  display: flex;
+  gap: 0.8rem;
+}
+
+#followUpInput {
+  flex: 1;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+
+.send-btn {
+  padding: 1rem 1.5rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.send-btn:disabled {
+  background: #a0aec0;
+  cursor: not-allowed;
+}
+
+.chat-container::-webkit-scrollbar {
   width: 8px;
 }
 
-#codeOutput::-webkit-scrollbar-track {
-  background: #2d3748;
+.chat-container::-webkit-scrollbar-track {
+  background: #e2e8f0;
 }
 
-#codeOutput::-webkit-scrollbar-thumb {
-  background: #4a5568;
+.chat-container::-webkit-scrollbar-thumb {
+  background: #667eea;
   border-radius: 4px;
-}
-
-#codeOutput::-webkit-scrollbar-thumb:hover {
-  background: #718096;
 }
 
 @media (max-width: 768px) {
@@ -345,5 +347,9 @@ header {
 
   .output-actions {
     justify-content: center;
+  }
+
+  .follow-up-input {
+    flex-direction: column;
   }
 }
