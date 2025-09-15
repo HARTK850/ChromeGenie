@@ -79,7 +79,7 @@ class ChromeGenie {
     try {
       console.log("[ChromeGenie] Sending request to Gemini API...")
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: {
@@ -199,7 +199,7 @@ class ChromeGenie {
 [קוד]`
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${this.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
       {
         method: "POST",
         headers: {
