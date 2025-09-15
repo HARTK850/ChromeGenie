@@ -20,7 +20,6 @@ class ChromeGenie {
     this.copyBtn = document.getElementById("copyBtn")
     this.downloadBtn = document.getElementById("downloadBtn")
 
-    // בדיקת דיבוג: ודא שהאלמנטים נמצאו
     if (!this.validateApiBtn) {
       console.error("[ChromeGenie] Error: validateApiBtn not found in DOM!")
       alert("שגיאה: כפתור בדיקת API לא נמצא. בדוק את ה-HTML.")
@@ -28,7 +27,6 @@ class ChromeGenie {
     if (!this.apiKeyInput) {
       console.error("[ChromeGenie] Error: apiKeyInput not found in DOM!")
     }
-    // ניתן להוסיף בדיקות נוספות לאלמנטים אחרים אם צריך
   }
 
   bindEvents() {
@@ -81,7 +79,7 @@ class ChromeGenie {
     try {
       console.log("[ChromeGenie] Sending request to Gemini API...")
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: {
@@ -171,7 +169,7 @@ class ChromeGenie {
   }
 
   async callGeminiAPI(idea) {
-    const prompt = `צור תוסף כروم מלא ופונקציונלי על בסיס הרעיון: "${idea}"
+    const prompt = `צור תוסף כרום מלא ופונקציונלי על בסיס הרעיון: "${idea}"
 
 אנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
 
@@ -201,7 +199,7 @@ class ChromeGenie {
 [קוד]`
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${this.apiKey}`,
       {
         method: "POST",
         headers: {
@@ -271,7 +269,6 @@ class ChromeGenie {
       }
     }
 
-    // אם לא נמצאו קבצים מובנים, נשמור את כל הקוד כקובץ יחיד
     if (Object.keys(files).length === 0) {
       files["extension-code.txt"] = code
     }
@@ -311,7 +308,6 @@ script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
 script.onload = () => {
   console.log("[ChromeGenie] JSZip loaded successfully.")
   window.JSZip = window.JSZip || {}
-  // אתחול האפליקציה
   new ChromeGenie()
 }
 script.onerror = () => {
@@ -320,7 +316,6 @@ script.onerror = () => {
 }
 document.head.appendChild(script)
 
-// ודא אתחול גם אם JSZip נטען מאוחר
 document.addEventListener("DOMContentLoaded", () => {
   if (window.JSZip && !window.chromeGenieInstance) {
     window.chromeGenieInstance = new ChromeGenie()
