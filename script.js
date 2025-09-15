@@ -19,14 +19,34 @@ class ChromeGenie {
     this.codeOutput = document.getElementById("codeOutput")
     this.copyBtn = document.getElementById("copyBtn")
     this.downloadBtn = document.getElementById("downloadBtn")
+
+    // בדיקת דיבוג: ודא שהאלמנטים נמצאו
+    if (!this.validateApiBtn) {
+      console.error("[ChromeGenie] Error: validateApiBtn not found in DOM!")
+      alert("שגיאה: כפתור בדיקת API לא נמצא. בדוק את ה-HTML.")
+    }
+    if (!this.apiKeyInput) {
+      console.error("[ChromeGenie] Error: apiKeyInput not found in DOM!")
+    }
+    // ניתן להוסיף בדיקות נוספות לאלמנטים אחרים אם צריך
   }
 
   bindEvents() {
-    this.validateApiBtn.addEventListener("click", () => this.validateApiKey())
-    this.generateBtn.addEventListener("click", () => this.generateExtension())
-    this.copyBtn.addEventListener("click", () => this.copyCode())
-    this.downloadBtn.addEventListener("click", () => this.downloadExtension())
-    this.apiKeyInput.addEventListener("input", () => this.onApiKeyChange())
+    if (this.validateApiBtn) {
+      this.validateApiBtn.addEventListener("click", () => this.validateApiKey())
+    }
+    if (this.generateBtn) {
+      this.generateBtn.addEventListener("click", () => this.generateExtension())
+    }
+    if (this.copyBtn) {
+      this.copyBtn.addEventListener("click", () => this.copyCode())
+    }
+    if (this.downloadBtn) {
+      this.downloadBtn.addEventListener("click", () => this.downloadExtension())
+    }
+    if (this.apiKeyInput) {
+      this.apiKeyInput.addEventListener("input", () => this.onApiKeyChange())
+    }
   }
 
   loadSavedApiKey() {
@@ -46,10 +66,12 @@ class ChromeGenie {
   }
 
   async validateApiKey() {
+    console.log("[ChromeGenie] Starting API key validation...")
     const apiKey = this.apiKeyInput.value.trim()
 
     if (!apiKey) {
       this.showApiStatus("אנא הכנס מפתח API", "error")
+      console.warn("[ChromeGenie] No API key entered.")
       return
     }
 
@@ -57,6 +79,7 @@ class ChromeGenie {
     this.validateApiBtn.textContent = "בודק..."
 
     try {
+      console.log("[ChromeGenie] Sending request to Gemini API...")
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
         {
@@ -79,21 +102,27 @@ class ChromeGenie {
       )
 
       if (response.ok) {
+        console.log("[ChromeGenie] API key validated successfully.")
         this.apiKey = apiKey
         this.isApiKeyValid = true
         localStorage.setItem("gemini_api_key", apiKey)
         localStorage.setItem("api_key_valid", "true")
         this.showApiStatus("מפתח תקין ✓", "success")
       } else {
-        throw new Error("מפתח לא תקין")
+        const errorData = await response.json()
+        console.error("[ChromeGenie] API validation failed:", errorData)
+        throw new Error("מפתח לא תקין: " + (errorData.error?.message || "שגיאה לא ידועה"))
       }
     } catch (error) {
-      this.showApiStatus("מפתח לא תקין ✗", "error")
+      console.error("[ChromeGenie] Error during validation:", error)
+      this.showApiStatus("מפתח לא תקין ✗: " + error.message, "error")
       this.isApiKeyValid = false
       localStorage.removeItem("api_key_valid")
+      alert("שגיאה בבדיקת המפתח: " + error.message)
     } finally {
       this.validateApiBtn.disabled = false
       this.validateApiBtn.textContent = "בדוק מפתח"
+      console.log("[ChromeGenie] Validation process completed.")
     }
   }
 
@@ -123,7 +152,7 @@ class ChromeGenie {
       this.outputSection.style.display = "block"
       this.outputSection.scrollIntoView({ behavior: "smooth" })
     } catch (error) {
-      console.error("[v0] Error generating extension:", error)
+      console.error("[ChromeGenie] Error generating extension:", error)
       alert("שגיאה ביצירת התוסף: " + error.message)
     } finally {
       this.setGenerateButtonLoading(false)
@@ -215,7 +244,7 @@ class ChromeGenie {
         this.copyBtn.textContent = originalText
       }, 2000)
     } catch (error) {
-      console.error("[v0] Copy failed:", error)
+      console.error("[ChromeGenie] Copy failed:", error)
       alert("שגיאה בהעתקה")
     }
   }
@@ -225,7 +254,7 @@ class ChromeGenie {
       const files = this.parseGeneratedCode(this.generatedCode)
       this.createAndDownloadZip(files)
     } catch (error) {
-      console.error("[v0] Download failed:", error)
+      console.error("[ChromeGenie] Download failed:", error)
       alert("שגיאה בהורדה. אנא העתק את הקוד ושמור ידנית.")
     }
   }
@@ -251,6 +280,11 @@ class ChromeGenie {
   }
 
   createAndDownloadZip(files) {
+    if (!window.JSZip) {
+      console.error("[ChromeGenie] JSZip not loaded!")
+      alert("שגיאה: ספריית JSZip לא נטענה. בדוק את החיבור ל-CDN.")
+      return
+    }
     const JSZip = window.JSZip
     const zip = new JSZip()
 
@@ -275,10 +309,20 @@ class ChromeGenie {
 const script = document.createElement("script")
 script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
 script.onload = () => {
-  // אתחול האפליקציה רק אחרי טעינת JSZip
+  console.log("[ChromeGenie] JSZip loaded successfully.")
   window.JSZip = window.JSZip || {}
-  document.addEventListener("DOMContentLoaded", () => {
-    new ChromeGenie()
-  })
+  // אתחול האפליקציה
+  new ChromeGenie()
+}
+script.onerror = () => {
+  console.error("[ChromeGenie] Failed to load JSZip!")
+  alert("שגיאה בטעינת ספריית JSZip. בדוק את החיבור לאינטרנט.")
 }
 document.head.appendChild(script)
+
+// ודא אתחול גם אם JSZip נטען מאוחר
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.JSZip && !window.chromeGenieInstance) {
+    window.chromeGenieInstance = new ChromeGenie()
+  }
+})
