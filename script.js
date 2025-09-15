@@ -19,6 +19,8 @@ class ChromeGenie {
     this.codeOutput = document.getElementById("codeOutput")
     this.copyBtn = document.getElementById("copyBtn")
     this.downloadBtn = document.getElementById("downloadBtn")
+    this.fileTabs = document.getElementById("fileTabs")
+    this.aiResponse = document.getElementById("aiResponse")
 
     if (!this.validateApiBtn) {
       console.error("[ChromeGenie] Error: validateApiBtn not found in DOM!")
@@ -146,7 +148,7 @@ class ChromeGenie {
 
     try {
       const extensionCode = await this.callGeminiAPI(idea)
-      this.displayCode(extensionCode)
+      this.displayCodeAndResponse(extensionCode)
       this.outputSection.style.display = "block"
       this.outputSection.scrollIntoView({ behavior: "smooth" })
     } catch (error) {
@@ -228,14 +230,44 @@ class ChromeGenie {
     return data.candidates[0].content.parts[0].text
   }
 
-  displayCode(code) {
-    this.generatedCode = code
-    this.codeOutput.textContent = code
+  displayCodeAndResponse(code) {
+    // נפרד את התשובה לקבצים
+    const files = this.parseGeneratedCode(code)
+    this.fileTabs.innerHTML = ""
+    this.codeOutput.innerHTML = ""
+
+    // יצירת כרטיסיות לקבצים
+    Object.keys(files).forEach((filename, index) => {
+      const tab = document.createElement("button")
+      tab.className = "file-tab" + (index === 0 ? " active" : "")
+      tab.textContent = filename
+      tab.addEventListener("click", () => this.switchTab(filename))
+      this.fileTabs.appendChild(tab)
+
+      const contentDiv = document.createElement("div")
+      contentDiv.className = "file-content" + (index === 0 ? " active" : "")
+      contentDiv.textContent = files[filename]
+      this.codeOutput.appendChild(contentDiv)
+    })
+
+    // הצגת התשובה המלאה של ה-AI מחוץ לעורך
+    this.aiResponse.textContent = code
+  }
+
+  switchTab(filename) {
+    const tabs = this.fileTabs.getElementsByClassName("file-tab")
+    const contents = this.codeOutput.getElementsByClassName("file-content")
+
+    for (let i = 0; i < tabs.length; i++) {
+      tabs[i].classList.toggle("active", tabs[i].textContent === filename)
+      contents[i].classList.toggle("active", contents[i].textContent === filename)
+    }
   }
 
   async copyCode() {
     try {
-      await navigator.clipboard.writeText(this.generatedCode)
+      const activeContent = this.codeOutput.querySelector(".file-content.active")
+      await navigator.clipboard.writeText(activeContent.textContent)
       const originalText = this.copyBtn.textContent
       this.copyBtn.textContent = "הועתק! ✓"
       setTimeout(() => {
@@ -249,7 +281,12 @@ class ChromeGenie {
 
   downloadExtension() {
     try {
-      const files = this.parseGeneratedCode(this.generatedCode)
+      const files = {}
+      const contents = this.codeOutput.getElementsByClassName("file-content")
+      const tabs = this.fileTabs.getElementsByClassName("file-tab")
+      for (let i = 0; i < tabs.length; i++) {
+        files[tabs[i].textContent] = contents[i].textContent
+      }
       this.createAndDownloadZip(files)
     } catch (error) {
       console.error("[ChromeGenie] Download failed:", error)
