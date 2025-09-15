@@ -2,6 +2,7 @@ class ChromeGenie {
   constructor() {
     this.apiKey = localStorage.getItem("gemini_api_key") || ""
     this.isApiKeyValid = localStorage.getItem("api_key_valid") === "true"
+    this.chatHistory = [] // היסטוריית צ'אט: [{role: 'user'|'model', content: string}]
     this.initializeElements()
     this.bindEvents()
     this.loadSavedApiKey()
@@ -16,11 +17,11 @@ class ChromeGenie {
     this.btnText = document.querySelector(".btn-text")
     this.btnLoader = document.querySelector(".btn-loader")
     this.outputSection = document.getElementById("outputSection")
-    this.codeOutput = document.getElementById("codeOutput")
+    this.chatContainer = document.getElementById("chatContainer")
+    this.followUpInput = document.getElementById("followUpInput")
+    this.sendFollowUpBtn = document.getElementById("sendFollowUpBtn")
     this.copyBtn = document.getElementById("copyBtn")
     this.downloadBtn = document.getElementById("downloadBtn")
-    this.fileTabs = document.getElementById("fileTabs")
-    this.aiResponse = document.getElementById("aiResponse")
 
     if (!this.validateApiBtn) {
       console.error("[ChromeGenie] Error: validateApiBtn not found in DOM!")
@@ -36,16 +37,24 @@ class ChromeGenie {
       this.validateApiBtn.addEventListener("click", () => this.validateApiKey())
     }
     if (this.generateBtn) {
-      this.generateBtn.addEventListener("click", () => this.generateExtension())
+      this.generateBtn.addEventListener("click", () => this.startChat())
+    }
+    if (this.sendFollowUpBtn) {
+      this.sendFollowUpBtn.addEventListener("click", () => this.sendFollowUp())
     }
     if (this.copyBtn) {
-      this.copyBtn.addEventListener("click", () => this.copyCode())
+      this.copyBtn.addEventListener("click", () => this.copyLastResponse())
     }
     if (this.downloadBtn) {
       this.downloadBtn.addEventListener("click", () => this.downloadExtension())
     }
     if (this.apiKeyInput) {
       this.apiKeyInput.addEventListener("input", () => this.onApiKeyChange())
+    }
+    if (this.followUpInput) {
+      this.followUpInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") this.sendFollowUp()
+      })
     }
   }
 
@@ -131,7 +140,7 @@ class ChromeGenie {
     this.apiStatus.className = `api-status ${type}`
   }
 
-  async generateExtension() {
+  async startChat() {
     const idea = this.ideaInput.value.trim()
 
     if (!idea) {
@@ -144,18 +153,44 @@ class ChromeGenie {
       return
     }
 
+    this.chatHistory = [] // אפס היסטוריה להתחלה חדשה
+    this.chatHistory.push({ role: "user", content: idea })
+    this.renderChat()
+    this.outputSection.style.display = "block"
+    this.outputSection.scrollIntoView({ behavior: "smooth" })
+
     this.setGenerateButtonLoading(true)
 
     try {
-      const extensionCode = await this.callGeminiAPI(idea)
-      this.displayCodeAndResponse(extensionCode)
-      this.outputSection.style.display = "block"
-      this.outputSection.scrollIntoView({ behavior: "smooth" })
+      const response = await this.callGeminiAPI()
+      this.chatHistory.push({ role: "model", content: response })
+      this.renderChat()
     } catch (error) {
       console.error("[ChromeGenie] Error generating extension:", error)
       alert("שגיאה ביצירת התוסף: " + error.message)
     } finally {
       this.setGenerateButtonLoading(false)
+    }
+  }
+
+  async sendFollowUp() {
+    const message = this.followUpInput.value.trim()
+    if (!message) return
+
+    this.chatHistory.push({ role: "user", content: message })
+    this.renderChat()
+    this.followUpInput.value = ""
+    this.sendFollowUpBtn.disabled = true
+
+    try {
+      const response = await this.callGeminiAPI()
+      this.chatHistory.push({ role: "model", content: response })
+      this.renderChat()
+    } catch (error) {
+      console.error("[ChromeGenie] Error in follow-up:", error)
+      alert("שגיאה בשליחת הודעה: " + error.message)
+    } finally {
+      this.sendFollowUpBtn.disabled = false
     }
   }
 
@@ -170,8 +205,8 @@ class ChromeGenie {
     }
   }
 
-  async callGeminiAPI(idea) {
-    const prompt = `צור תוסף כרום מלא ופונקציונלי על בסיס הרעיון: "${idea}"
+  async callGeminiAPI() {
+    const basePrompt = `צור תוסף כרום מלא ופונקציונלי על בסיס הרעיון וההקשר מההודעות הקודמות.
 
 אנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
 
@@ -200,6 +235,11 @@ class ChromeGenie {
 === styles.css ===
 [קוד]`
 
+    const contents = this.chatHistory.map(msg => ({
+      parts: [{ text: msg.role === "user" ? msg.content : msg.content }]
+    }))
+    contents.unshift({ parts: [{ text: basePrompt }] }) // הוסף פרומפט בסיסי בהתחלה
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
       {
@@ -207,17 +247,7 @@ class ChromeGenie {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-        }),
+        body: JSON.stringify({ contents }),
       },
     )
 
@@ -230,44 +260,21 @@ class ChromeGenie {
     return data.candidates[0].content.parts[0].text
   }
 
-  displayCodeAndResponse(code) {
-    // נפרד את התשובה לקבצים
-    const files = this.parseGeneratedCode(code)
-    this.fileTabs.innerHTML = ""
-    this.codeOutput.innerHTML = ""
-
-    // יצירת כרטיסיות לקבצים
-    Object.keys(files).forEach((filename, index) => {
-      const tab = document.createElement("button")
-      tab.className = "file-tab" + (index === 0 ? " active" : "")
-      tab.textContent = filename
-      tab.addEventListener("click", () => this.switchTab(filename))
-      this.fileTabs.appendChild(tab)
-
-      const contentDiv = document.createElement("div")
-      contentDiv.className = "file-content" + (index === 0 ? " active" : "")
-      contentDiv.textContent = files[filename]
-      this.codeOutput.appendChild(contentDiv)
+  renderChat() {
+    this.chatContainer.innerHTML = ""
+    this.chatHistory.forEach(msg => {
+      const bubble = document.createElement("div")
+      bubble.className = `chat-bubble ${msg.role === "user" ? "user" : "ai"}`
+      bubble.textContent = msg.content
+      this.chatContainer.appendChild(bubble)
     })
-
-    // הצגת התשובה המלאה של ה-AI מחוץ לעורך
-    this.aiResponse.textContent = code
+    this.chatContainer.scrollTop = this.chatContainer.scrollHeight
   }
 
-  switchTab(filename) {
-    const tabs = this.fileTabs.getElementsByClassName("file-tab")
-    const contents = this.codeOutput.getElementsByClassName("file-content")
-
-    for (let i = 0; i < tabs.length; i++) {
-      tabs[i].classList.toggle("active", tabs[i].textContent === filename)
-      contents[i].classList.toggle("active", contents[i].textContent === filename)
-    }
-  }
-
-  async copyCode() {
+  async copyLastResponse() {
+    const lastAiMessage = this.chatHistory[this.chatHistory.length - 1]?.content || ""
     try {
-      const activeContent = this.codeOutput.querySelector(".file-content.active")
-      await navigator.clipboard.writeText(activeContent.textContent)
+      await navigator.clipboard.writeText(lastAiMessage)
       const originalText = this.copyBtn.textContent
       this.copyBtn.textContent = "הועתק! ✓"
       setTimeout(() => {
@@ -280,13 +287,9 @@ class ChromeGenie {
   }
 
   downloadExtension() {
+    const lastAiMessage = this.chatHistory[this.chatHistory.length - 1]?.content || ""
     try {
-      const files = {}
-      const contents = this.codeOutput.getElementsByClassName("file-content")
-      const tabs = this.fileTabs.getElementsByClassName("file-tab")
-      for (let i = 0; i < tabs.length; i++) {
-        files[tabs[i].textContent] = contents[i].textContent
-      }
+      const files = this.parseGeneratedCode(lastAiMessage)
       this.createAndDownloadZip(files)
     } catch (error) {
       console.error("[ChromeGenie] Download failed:", error)
