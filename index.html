@@ -1,60 +1,61 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="he">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChromeGenie - צור תוספי כרום בעזרת AI</title>
+    <title>ChromeGenie</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <div class="logo">
-                <h1>🧞‍♂️ ChromeGenie</h1>
+                <h1>ChromeGenie</h1>
                 <p>צור תוספי כרום מותאמים אישית בעזרת AI</p>
             </div>
         </header>
 
-        <main>
-            <section class="creation-area">
-                <h2>תאר את הרעיון שלך</h2>
-                
-                <div class="input-group">
-                    <label for="ideaInput">מה התוסף שלך יעשה?</label>
-                    <textarea id="ideaInput" placeholder="למשל: תוסף שמסמן מילים קשות בטקסט ומציג הסבר עליהן, או תוסף שמשנה את צבע הרקע של כל האתרים לצבע שאני אוהב..."></textarea>
-                </div>
+        <div class="creation-area">
+            <h2>תאר את הרעיון שלך</h2>
 
-                <div class="api-group">
-                    <label for="apiKey">מפתח Gemini API</label>
-                    <div class="api-input-container">
-                        <input type="password" id="apiKey" placeholder="הכנס את מפתח ה-API שלך">
-                        <button id="validateApiBtn" class="validate-btn">בדוק מפתח</button>
-                    </div>
-                    <div id="apiStatus" class="api-status"></div>
-                    <small>המפתח נשמר מקומית בדפדפן שלך בלבד</small>
-                </div>
-                
-                <button id="generateBtn" class="generate-btn">
-                    <span class="btn-text">צור תוסף</span>
-                    <span class="btn-loader" style="display: none;">🔄</span>
-                </button>
-            </section>
+            <div class="input-group">
+                <label for="ideaInput">מה התוסף שלך יעשה?</label>
+                <textarea id="ideaInput" placeholder="תאר את הרעיון שלך כאן..."></textarea>
+            </div>
 
-            <section class="output-section" id="outputSection" style="display: none;">
-                <div class="output-header">
-                    <h3>✨ התוסף שלך מוכן!</h3>
-                    <div class="output-actions">
-                        <button id="copyBtn" class="action-btn">📋 העתק</button>
-                        <button id="downloadBtn" class="action-btn">💾 הורד</button>
-                    </div>
+            <div class="api-group">
+                <label for="apiKey">מפתח Gemini API</label>
+                <div class="api-input-container">
+                    <input type="text" id="apiKey" placeholder="הכנס מפתח API">
+                    <button id="validateApiBtn" class="validate-btn">בדוק מפתח</button>
                 </div>
-                <div class="code-container">
-                    <pre id="codeOutput"></pre>
+                <small>המפתח נשמר מקומית בדפדפן שלך בלבד</small>
+                <div id="apiStatus" class="api-status"></div>
+            </div>
+
+            <button id="generateBtn" class="generate-btn">
+                <span class="btn-text">צור תוסף</span>
+                <span class="btn-loader" style="display: none;">🔄</span>
+            </button>
+        </div>
+
+        <div id="outputSection" class="output-section" style="display: none;">
+            <div class="output-header">
+                <h3>✨ התוסף שלך מוכן!</h3>
+                <div class="output-actions">
+                    <button id="copyBtn" class="action-btn">📋 העתק</button>
+                    <button id="downloadBtn" class="action-btn">💾 הורד</button>
                 </div>
-            </section>
-        </main>
+            </div>
+
+            <div id="aiResponse" class="ai-response"></div>
+
+            <div class="code-editor">
+                <div id="fileTabs" class="file-tabs"></div>
+                <div id="codeOutput" class="code-container"></div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
 </body>
-</html>
