@@ -46,9 +46,13 @@ class ChromeGenie {
     this.saveSettingsBtn = document.getElementById("saveSettingsBtn")
     this.saveApiBtn = document.getElementById("saveApiBtn")
 
-    if (!this.generateBtn) {
-      console.error("[ChromeGenie] Error: generateBtn not found in DOM!")
-      alert("שגיאה: כפתור יצירה לא נמצא. בדוק את ה-HTML.")
+    if (!this.validateApiBtn) {
+      console.error("[ChromeGenie] Error: validateApiBtn not found in DOM!")
+      alert("שגיאה: כפתור שמור API לא נמצא. בדוק את ה-HTML.")
+    }
+    if (!this.apiKeyInput) {
+      console.error("[ChromeGenie] Error: apiKeyInput not found in DOM!")
+      alert("שגיאה: שדה מפתח API לא נמצא. בדוק את ה-HTML.")
     }
   }
 
@@ -143,12 +147,13 @@ class ChromeGenie {
 
     this.validateApiBtn.disabled = true
     this.validateApiBtn.textContent = "בודק..."
+    this.apiStatus.textContent = "מאמת מפתח..."
 
     this.validateApiKey(apiKey).then(() => {
       this.closeModals()
     }).catch(error => {
       console.error("[ChromeGenie] Error during validation:", error)
-      this.showApiStatus("מפתח לא תקין ✗: " + error.message, "error")
+      this.showApiStatus("שגיאה: " + error.message, "error")
     }).finally(() => {
       this.validateApiBtn.disabled = false
       this.validateApiBtn.textContent = "שמור"
@@ -156,7 +161,6 @@ class ChromeGenie {
   }
 
   async validateApiKey(apiKey) {
-    console.log("[ChromeGenie] Starting API key validation...")
     try {
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1/models/${this.settings.model}:generateContent?key=${apiKey}`,
@@ -166,7 +170,7 @@ class ChromeGenie {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: "בדיקה" }] }],
+            contents: [{ parts: [{ text: "בדיקת מפתח API" }] }],
             generationConfig: {
               temperature: this.settings.temperature,
               topP: this.settings.top_p,
@@ -179,17 +183,17 @@ class ChromeGenie {
 
       if (!response.ok) {
         const errorData = await response.json()
-        console.error("[ChromeGenie] API validation failed:", errorData)
         throw new Error(`שגיאה ${response.status}: ${errorData.error?.message || "שגיאה לא ידועה"}`)
       }
 
-      console.log("[ChromeGenie] API key validated successfully.")
       this.apiKey = apiKey
       this.isApiKeyValid = true
       localStorage.setItem("gemini_api_key", apiKey)
       localStorage.setItem("api_key_valid", "true")
       this.showApiStatus("מפתח תקין ✓", "success")
     } catch (error) {
+      this.isApiKeyValid = false
+      localStorage.removeItem("api_key_valid")
       throw error
     }
   }
@@ -232,7 +236,7 @@ class ChromeGenie {
       this.renderChat()
     } catch (error) {
       console.error("[ChromeGenie] Error generating extension:", error)
-      alert("שגיאה ביצירת התוסף: " + error.message + ". ודא שה-API Key תקף ויש גישה למודל.")
+      alert("שגיאה ביצירת התוסף: " + error.message)
     } finally {
       this.setGenerateButtonLoading(false)
     }
