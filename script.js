@@ -206,6 +206,9 @@ class ChromeGenie {
         throw new Error(`שגיאה ${response.status}: ${errorData.error?.message || "שגיאה לא ידועה"}`)
       }
 
+      const data = await response.json()
+      console.log("[ChromeGenie] API response:", data)
+
       this.apiKey = apiKey
       this.isApiKeyValid = true
       localStorage.setItem("gemini_api_key", apiKey)
@@ -332,6 +335,8 @@ class ChromeGenie {
     }))
     contents.unshift({ role: "user", parts: [{ text: basePrompt }] })
 
+    console.log("[ChromeGenie] Sending request to API with contents:", contents)
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/${this.settings.model}:generateContent?key=${this.apiKey}`,
       {
@@ -351,12 +356,21 @@ class ChromeGenie {
       },
     )
 
+    console.log("[ChromeGenie] API response status:", response.status)
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      console.error("[ChromeGenie] API error data:", errorData)
       throw new Error(`שגיאה ${response.status}: ${errorData.error?.message || "שגיאה לא ידועה ב-API"}`)
     }
 
     const data = await response.json()
+    console.log("[ChromeGenie] API response data:", data)
+
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+      throw new Error("תגובה לא תקינה מה-API: אין תוכן")
+    }
+
     return data.candidates[0].content.parts[0].text
   }
 
