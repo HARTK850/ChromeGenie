@@ -3,14 +3,14 @@ class ChromeGenie {
     this.apiKey = localStorage.getItem("gemini_api_key") || ""
     this.isApiKeyValid = localStorage.getItem("api_key_valid") === "true"
     this.settings = JSON.parse(localStorage.getItem("genie_settings")) || {
-      model: "gemini-2.5-flash", // המודל המוגדר כברירת מחדל
+      model: "gemini-2.5-flash",
       temperature: 0.7,
       top_p: 0.95,
       top_k: 40,
       max_tokens: 1024
     }
     this.chatHistory = []
-    this.chats = JSON.parse(localStorage.getItem("genie_chats")) || [] // [{id, name, history, favorite}]
+    this.chats = JSON.parse(localStorage.getItem("genie_chats")) || []
     this.currentChatId = null
     this.initializeElements()
     this.bindEvents()
@@ -95,7 +95,7 @@ class ChromeGenie {
     document.getElementById(modalId).style.display = "block"
     if (modalId === "historyModal") this.renderHistoryList()
     if (modalId === "settingsModal") this.renderSettings()
-    if (modalId === "apiModal") this.loadSavedApiKey() // טען את המפתח שמור לחלונית
+    if (modalId === "apiModal") this.loadSavedApiKey()
   }
 
   closeModals() {
@@ -157,44 +157,40 @@ class ChromeGenie {
 
   async validateApiKey(apiKey) {
     console.log("[ChromeGenie] Starting API key validation...")
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${this.settings.model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models/${this.settings.model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "בדיקה" }] }],
+            generationConfig: {
+              temperature: this.settings.temperature,
+              topP: this.settings.top_p,
+              topK: this.settings.top_k,
+              maxOutputTokens: this.settings.max_tokens
+            }
+          }),
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: "בדיקה",
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: this.settings.temperature,
-            topP: this.settings.top_p,
-            topK: this.settings.top_k,
-            maxOutputTokens: this.settings.max_tokens
-          }
-        }),
-      },
-    )
+      )
 
-    if (response.ok) {
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("[ChromeGenie] API validation failed:", errorData)
+        throw new Error(`שגיאה ${response.status}: ${errorData.error?.message || "שגיאה לא ידועה"}`)
+      }
+
       console.log("[ChromeGenie] API key validated successfully.")
       this.apiKey = apiKey
       this.isApiKeyValid = true
       localStorage.setItem("gemini_api_key", apiKey)
       localStorage.setItem("api_key_valid", "true")
       this.showApiStatus("מפתח תקין ✓", "success")
-    } else {
-      const errorData = await response.json()
-      console.error("[ChromeGenie] API validation failed:", errorData)
-      throw new Error("מפתח לא תקין: " + (errorData.error?.message || "שגיאה לא ידועה"))
+    } catch (error) {
+      throw error
     }
   }
 
@@ -212,7 +208,7 @@ class ChromeGenie {
     }
 
     if (!this.isApiKeyValid) {
-      alert("אנא הגדר מפתח API תקין בחלונית ההגדרות")
+      alert("אנא הגדר מפתח API תקין בחלונית ה-API")
       return
     }
 
@@ -236,7 +232,7 @@ class ChromeGenie {
       this.renderChat()
     } catch (error) {
       console.error("[ChromeGenie] Error generating extension:", error)
-      alert("שגיאה ביצירת התוסף: " + error.message)
+      alert("שגיאה ביצירת התוסף: " + error.message + ". ודא שה-API Key תקף ויש גישה למודל.")
     } finally {
       this.setGenerateButtonLoading(false)
     }
@@ -332,7 +328,7 @@ class ChromeGenie {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error?.message || "שגיאה בקריאה ל-API של Gemini")
+      throw new Error(`שגיאה ${response.status}: ${errorData.error?.message || "שגיאה לא ידועה ב-API"}`)
     }
 
     const data = await response.json()
