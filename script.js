@@ -7,7 +7,8 @@ class ChromeGenie {
       temperature: 0.7,
       top_p: 0.95,
       top_k: 40,
-      max_tokens: 1024
+      max_tokens: 1024,
+      unlimited_tokens: false
     }
     this.chatHistory = []
     this.chats = JSON.parse(localStorage.getItem("genie_chats")) || []
@@ -43,6 +44,7 @@ class ChromeGenie {
     this.topPInput = document.getElementById("topPInput")
     this.topKInput = document.getElementById("topKInput")
     this.maxTokensInput = document.getElementById("maxTokensInput")
+    this.unlimitedTokensCheckbox = document.getElementById("unlimitedTokensCheckbox")
     this.saveSettingsBtn = document.getElementById("saveSettingsBtn")
     this.saveApiBtn = document.getElementById("saveApiBtn")
 
@@ -114,6 +116,8 @@ class ChromeGenie {
     this.topPInput.value = this.settings.top_p
     this.topKInput.value = this.settings.top_k
     this.maxTokensInput.value = this.settings.max_tokens
+    this.unlimitedTokensCheckbox.checked = this.settings.unlimited_tokens
+    this.toggleMaxTokensInput()
   }
 
   saveSettings() {
@@ -122,11 +126,16 @@ class ChromeGenie {
       temperature: parseFloat(this.temperatureInput.value),
       top_p: parseFloat(this.topPInput.value),
       top_k: parseInt(this.topKInput.value),
-      max_tokens: parseInt(this.maxTokensInput.value)
+      max_tokens: this.unlimitedTokensCheckbox.checked ? null : parseInt(this.maxTokensInput.value),
+      unlimited_tokens: this.unlimitedTokensCheckbox.checked
     }
     localStorage.setItem("genie_settings", JSON.stringify(this.settings))
     alert("הגדרות נשמרו!")
     this.closeModals()
+  }
+
+  toggleMaxTokensInput() {
+    this.maxTokensInput.disabled = this.unlimitedTokensCheckbox.checked
   }
 
   loadSavedApiKey() {
@@ -175,7 +184,7 @@ class ChromeGenie {
               temperature: this.settings.temperature,
               topP: this.settings.top_p,
               topK: this.settings.top_k,
-              maxOutputTokens: this.settings.max_tokens
+              maxOutputTokens: this.settings.max_tokens || 2048
             }
           }),
         },
@@ -324,7 +333,7 @@ class ChromeGenie {
             temperature: this.settings.temperature,
             topP: this.settings.top_p,
             topK: this.settings.top_k,
-            maxOutputTokens: this.settings.max_tokens
+            maxOutputTokens: this.settings.unlimited_tokens ? undefined : this.settings.max_tokens
           }
         }),
       },
