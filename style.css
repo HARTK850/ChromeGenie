@@ -426,13 +426,13 @@ header {
     font-size: 2.5rem;
   }
 
-  .creation-area {
-    padding: 2rem;
-  }
-
   .top-buttons {
     top: 0.5rem;
     right: 0.5rem;
+  }
+
+  .creation-area {
+    padding: 2rem;
   }
 
   .output-header {
