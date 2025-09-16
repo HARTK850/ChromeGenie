@@ -2,17 +2,6 @@ class ChromeGenie {
   constructor() {
     this.apiKey = localStorage.getItem("gemini_api_key") || ""
     this.isApiKeyValid = localStorage.getItem("api_key_valid") === "true"
-    this.settings = JSON.parse(localStorage.getItem("genie_settings")) || {
-      model: "gemini-2.5-flash",
-      temperature: 0.7,
-      top_p: 0.95,
-      top_k: 40,
-      max_tokens: 1024,
-      unlimited_tokens: false
-    }
-    this.chatHistory = []
-    this.chats = JSON.parse(localStorage.getItem("genie_chats")) || []
-    this.currentChatId = null
     this.initializeElements()
     this.bindEvents()
     this.loadSavedApiKey()
@@ -20,122 +9,44 @@ class ChromeGenie {
 
   initializeElements() {
     this.ideaInput = document.getElementById("ideaInput")
+    this.apiKeyInput = document.getElementById("apiKey")
+    this.validateApiBtn = document.getElementById("validateApiBtn")
+    this.apiStatus = document.getElementById("apiStatus")
     this.generateBtn = document.getElementById("generateBtn")
     this.btnText = document.querySelector(".btn-text")
     this.btnLoader = document.querySelector(".btn-loader")
     this.outputSection = document.getElementById("outputSection")
-    this.chatContainer = document.getElementById("chatContainer")
-    this.followUpInput = document.getElementById("followUpInput")
-    this.sendFollowUpBtn = document.getElementById("sendFollowUpBtn")
+    this.codeOutput = document.getElementById("codeOutput")
     this.copyBtn = document.getElementById("copyBtn")
     this.downloadBtn = document.getElementById("downloadBtn")
-    this.historyBtn = document.getElementById("historyBtn")
-    this.apiBtn = document.getElementById("apiBtn")
-    this.settingsBtn = document.getElementById("settingsBtn")
-    this.historyModal = document.getElementById("historyModal")
-    this.apiModal = document.getElementById("apiModal")
-    this.settingsModal = document.getElementById("settingsModal")
-    this.historyList = document.getElementById("historyList")
-    this.apiKeyInput = document.getElementById("apiKey")
-    this.validateApiBtn = document.getElementById("validateApiBtn")
-    this.apiStatus = document.getElementById("apiStatus")
-    this.modelSelect = document.getElementById("modelSelect")
-    this.temperatureInput = document.getElementById("temperatureInput")
-    this.topPInput = document.getElementById("topPInput")
-    this.topKInput = document.getElementById("topKInput")
-    this.maxTokensInput = document.getElementById("maxTokensInput")
-    this.unlimitedTokensCheckbox = document.getElementById("unlimitedTokensCheckbox")
-    this.saveSettingsBtn = document.getElementById("saveSettingsBtn")
-    this.saveApiBtn = document.getElementById("saveApiBtn")
+    this.fileTabs = document.getElementById("fileTabs")
+    this.aiResponse = document.getElementById("aiResponse")
 
     if (!this.validateApiBtn) {
       console.error("[ChromeGenie] Error: validateApiBtn not found in DOM!")
-      alert("שגיאה: כפתור שמור API לא נמצא. בדוק את ה-HTML.")
+      alert("שגיאה: כפתור בדיקת API לא נמצא. בדוק את ה-HTML.")
     }
     if (!this.apiKeyInput) {
       console.error("[ChromeGenie] Error: apiKeyInput not found in DOM!")
-      alert("שגיאה: שדה מפתח API לא נמצא. בדוק את ה-HTML.")
     }
   }
 
   bindEvents() {
-    if (this.generateBtn) {
-      this.generateBtn.addEventListener("click", () => this.startChat())
+    if (this.validateApiBtn) {
+      this.validateApiBtn.addEventListener("click", () => this.validateApiKey())
     }
-    if (this.sendFollowUpBtn) {
-      this.sendFollowUpBtn.addEventListener("click", () => this.sendFollowUp())
+    if (this.generateBtn) {
+      this.generateBtn.addEventListener("click", () => this.generateExtension())
     }
     if (this.copyBtn) {
-      this.copyBtn.addEventListener("click", () => this.copyLastResponse())
+      this.copyBtn.addEventListener("click", () => this.copyCode())
     }
     if (this.downloadBtn) {
       this.downloadBtn.addEventListener("click", () => this.downloadExtension())
     }
-    if (this.followUpInput) {
-      this.followUpInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") this.sendFollowUp()
-      })
+    if (this.apiKeyInput) {
+      this.apiKeyInput.addEventListener("input", () => this.onApiKeyChange())
     }
-    if (this.historyBtn) {
-      this.historyBtn.addEventListener("click", () => this.toggleModal("historyModal"))
-    }
-    if (this.apiBtn) {
-      this.apiBtn.addEventListener("click", () => this.toggleModal("apiModal"))
-    }
-    if (this.settingsBtn) {
-      this.settingsBtn.addEventListener("click", () => this.toggleModal("settingsModal"))
-    }
-    if (this.saveSettingsBtn) {
-      this.saveSettingsBtn.addEventListener("click", () => this.saveSettings())
-    }
-    if (this.saveApiBtn) {
-      this.saveApiBtn.addEventListener("click", () => this.saveApiKey())
-    }
-    document.addEventListener("click", (e) => {
-      if (e.target.classList.contains("modal")) this.closeModals()
-    })
-  }
-
-  toggleModal(modalId) {
-    this.closeModals()
-    document.getElementById(modalId).style.display = "block"
-    if (modalId === "historyModal") this.renderHistoryList()
-    if (modalId === "settingsModal") this.renderSettings()
-    if (modalId === "apiModal") this.loadSavedApiKey()
-  }
-
-  closeModals() {
-    [this.historyModal, this.apiModal, this.settingsModal].forEach(modal => {
-      if (modal) modal.style.display = "none"
-    })
-  }
-
-  renderSettings() {
-    this.modelSelect.value = this.settings.model
-    this.temperatureInput.value = this.settings.temperature
-    this.topPInput.value = this.settings.top_p
-    this.topKInput.value = this.settings.top_k
-    this.maxTokensInput.value = this.settings.max_tokens
-    this.unlimitedTokensCheckbox.checked = this.settings.unlimited_tokens
-    this.toggleMaxTokensInput()
-  }
-
-  saveSettings() {
-    this.settings = {
-      model: this.modelSelect.value,
-      temperature: parseFloat(this.temperatureInput.value),
-      top_p: parseFloat(this.topPInput.value),
-      top_k: parseInt(this.topKInput.value),
-      max_tokens: this.unlimitedTokensCheckbox.checked ? null : parseInt(this.maxTokensInput.value),
-      unlimited_tokens: this.unlimitedTokensCheckbox.checked
-    }
-    localStorage.setItem("genie_settings", JSON.stringify(this.settings))
-    alert("הגדרות נשמרו!")
-    this.closeModals()
-  }
-
-  toggleMaxTokensInput() {
-    this.maxTokensInput.disabled = this.unlimitedTokensCheckbox.checked
   }
 
   loadSavedApiKey() {
@@ -147,63 +58,71 @@ class ChromeGenie {
     }
   }
 
-  saveApiKey() {
+  onApiKeyChange() {
+    this.isApiKeyValid = false
+    localStorage.removeItem("api_key_valid")
+    this.apiStatus.textContent = ""
+    this.apiStatus.className = "api-status"
+  }
+
+  async validateApiKey() {
+    console.log("[ChromeGenie] Starting API key validation...")
     const apiKey = this.apiKeyInput.value.trim()
+
     if (!apiKey) {
       this.showApiStatus("אנא הכנס מפתח API", "error")
+      console.warn("[ChromeGenie] No API key entered.")
       return
     }
 
     this.validateApiBtn.disabled = true
     this.validateApiBtn.textContent = "בודק..."
-    this.apiStatus.textContent = "מאמת מפתח..."
 
-    this.validateApiKey(apiKey).then(() => {
-      this.closeModals()
-    }).catch(error => {
-      console.error("[ChromeGenie] Error during validation:", error)
-      this.showApiStatus("שגיאה: " + error.message, "error")
-    }).finally(() => {
-      this.validateApiBtn.disabled = false
-      this.validateApiBtn.textContent = "שמור"
-    })
-  }
-
-  async validateApiKey(apiKey) {
     try {
+      console.log("[ChromeGenie] Sending request to Gemini API...")
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/${this.settings.model}:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: "בדיקת מפתח API" }] }],
-            generationConfig: {
-              temperature: this.settings.temperature,
-              topP: this.settings.top_p,
-              topK: this.settings.top_k,
-              maxOutputTokens: this.settings.max_tokens || 2048
-            }
+            contents: [
+              {
+                parts: [
+                  {
+                    text: "בדיקה",
+                  },
+                ],
+              },
+            ],
           }),
         },
       )
 
-      if (!response.ok) {
+      if (response.ok) {
+        console.log("[ChromeGenie] API key validated successfully.")
+        this.apiKey = apiKey
+        this.isApiKeyValid = true
+        localStorage.setItem("gemini_api_key", apiKey)
+        localStorage.setItem("api_key_valid", "true")
+        this.showApiStatus("מפתח תקין ✓", "success")
+      } else {
         const errorData = await response.json()
-        throw new Error(`שגיאה ${response.status}: ${errorData.error?.message || "שגיאה לא ידועה"}`)
+        console.error("[ChromeGenie] API validation failed:", errorData)
+        throw new Error("מפתח לא תקין: " + (errorData.error?.message || "שגיאה לא ידועה"))
       }
-
-      this.apiKey = apiKey
-      this.isApiKeyValid = true
-      localStorage.setItem("gemini_api_key", apiKey)
-      localStorage.setItem("api_key_valid", "true")
-      this.showApiStatus("מפתח תקין ✓", "success")
     } catch (error) {
+      console.error("[ChromeGenie] Error during validation:", error)
+      this.showApiStatus("מפתח לא תקין ✗: " + error.message, "error")
       this.isApiKeyValid = false
       localStorage.removeItem("api_key_valid")
-      throw error
+      alert("שגיאה בבדיקת המפתח: " + error.message)
+    } finally {
+      this.validateApiBtn.disabled = false
+      this.validateApiBtn.textContent = "בדוק מפתח"
+      console.log("[ChromeGenie] Validation process completed.")
     }
   }
 
@@ -212,7 +131,7 @@ class ChromeGenie {
     this.apiStatus.className = `api-status ${type}`
   }
 
-  async startChat() {
+  async generateExtension() {
     const idea = this.ideaInput.value.trim()
 
     if (!idea) {
@@ -221,56 +140,22 @@ class ChromeGenie {
     }
 
     if (!this.isApiKeyValid) {
-      alert("אנא הגדר מפתח API תקין בחלונית ה-API")
+      alert("אנא בדוק ושמור את מפתח ה-API תחילה")
       return
     }
-
-    this.chatHistory = []
-    this.chatHistory.push({ role: "user", content: idea })
-    const chatName = idea.length > 20 ? idea.substring(0, 20) + "..." : idea
-    this.currentChatId = Date.now().toString()
-    this.chats.push({ id: this.currentChatId, name: chatName, history: [...this.chatHistory], favorite: false })
-    localStorage.setItem("genie_chats", JSON.stringify(this.chats))
-    this.renderChat()
-    this.outputSection.style.display = "block"
-    this.outputSection.scrollIntoView({ behavior: "smooth" })
 
     this.setGenerateButtonLoading(true)
 
     try {
-      const response = await this.callGeminiAPI()
-      this.chatHistory.push({ role: "model", content: response })
-      this.chats.find(c => c.id === this.currentChatId).history = [...this.chatHistory]
-      localStorage.setItem("genie_chats", JSON.stringify(this.chats))
-      this.renderChat()
+      const extensionCode = await this.callGeminiAPI(idea)
+      this.displayCodeAndResponse(extensionCode)
+      this.outputSection.style.display = "block"
+      this.outputSection.scrollIntoView({ behavior: "smooth" })
     } catch (error) {
       console.error("[ChromeGenie] Error generating extension:", error)
       alert("שגיאה ביצירת התוסף: " + error.message)
     } finally {
       this.setGenerateButtonLoading(false)
-    }
-  }
-
-  async sendFollowUp() {
-    const message = this.followUpInput.value.trim()
-    if (!message || !this.currentChatId) return
-
-    this.chatHistory.push({ role: "user", content: message })
-    this.renderChat()
-    this.followUpInput.value = ""
-    this.sendFollowUpBtn.disabled = true
-
-    try {
-      const response = await this.callGeminiAPI()
-      this.chatHistory.push({ role: "model", content: response })
-      this.chats.find(c => c.id === this.currentChatId).history = [...this.chatHistory]
-      localStorage.setItem("genie_chats", JSON.stringify(this.chats))
-      this.renderChat()
-    } catch (error) {
-      console.error("[ChromeGenie] Error in follow-up:", error)
-      alert("שגיאה בשליחת הודעה: " + error.message)
-    } finally {
-      this.sendFollowUpBtn.disabled = false
     }
   }
 
@@ -285,8 +170,8 @@ class ChromeGenie {
     }
   }
 
-  async callGeminiAPI() {
-    const basePrompt = `צור תוסף כרום מלא ופונקציונלי על בסיס הרעיון וההקשר מההודעות הקודמות.
+  async callGeminiAPI(idea) {
+    const prompt = `צור תוסף כרום מלא ופונקציונלי על בסיס הרעיון: "${idea}"
 
 אנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
 
@@ -315,110 +200,74 @@ class ChromeGenie {
 === styles.css ===
 [קוד]`
 
-    const contents = this.chatHistory.map(msg => ({
-      parts: [{ text: msg.role === "user" ? msg.content : msg.content }]
-    }))
-    contents.unshift({ parts: [{ text: basePrompt }] })
-
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${this.settings.model}:generateContent?key=${this.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: this.settings.temperature,
-            topP: this.settings.top_p,
-            topK: this.settings.top_k,
-            maxOutputTokens: this.settings.unlimited_tokens ? undefined : this.settings.max_tokens
-          }
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
+            },
+          ],
         }),
       },
     )
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(`שגיאה ${response.status}: ${errorData.error?.message || "שגיאה לא ידועה ב-API"}`)
+      throw new Error(errorData.error?.message || "שגיאה בקריאה ל-API של Gemini")
     }
 
     const data = await response.json()
     return data.candidates[0].content.parts[0].text
   }
 
-  renderChat() {
-    this.chatContainer.innerHTML = ""
-    this.chatHistory.forEach(msg => {
-      const bubble = document.createElement("div")
-      bubble.className = `chat-bubble ${msg.role === "user" ? "user" : "ai"}`
-      bubble.textContent = msg.content
-      this.chatContainer.appendChild(bubble)
+  displayCodeAndResponse(code) {
+    // נפרד את התשובה לקבצים
+    const files = this.parseGeneratedCode(code)
+    this.fileTabs.innerHTML = ""
+    this.codeOutput.innerHTML = ""
+
+    // יצירת כרטיסיות לקבצים
+    Object.keys(files).forEach((filename, index) => {
+      const tab = document.createElement("button")
+      tab.className = "file-tab" + (index === 0 ? " active" : "")
+      tab.textContent = filename
+      tab.addEventListener("click", () => this.switchTab(filename))
+      this.fileTabs.appendChild(tab)
+
+      const contentDiv = document.createElement("div")
+      contentDiv.className = "file-content" + (index === 0 ? " active" : "")
+      contentDiv.textContent = files[filename]
+      this.codeOutput.appendChild(contentDiv)
     })
-    this.chatContainer.scrollTop = this.chatContainer.scrollHeight
+
+    // הצגת התשובה המלאה של ה-AI מחוץ לעורך
+    this.aiResponse.textContent = code
   }
 
-  renderHistoryList() {
-    this.historyList.innerHTML = ""
-    this.chats.forEach(chat => {
-      const item = document.createElement("div")
-      item.className = "history-item"
-      item.innerHTML = `
-        <span class="preview">${chat.name}</span>
-        <div>
-          <button class="favorite-btn" data-id="${chat.id}" data-fav="${chat.favorite}">${chat.favorite ? "★" : "☆"}</button>
-          <button class="delete-btn" data-id="${chat.id}">×</button>
-        </div>
-      `
-      item.addEventListener("click", () => this.loadChat(chat.id))
-      item.querySelector(".favorite-btn").addEventListener("click", (e) => {
-        e.stopPropagation()
-        this.toggleFavorite(chat.id)
-      })
-      item.querySelector(".delete-btn").addEventListener("click", (e) => {
-        e.stopPropagation()
-        this.deleteChat(chat.id)
-      })
-      this.historyList.appendChild(item)
-    })
-  }
+  switchTab(filename) {
+    const tabs = this.fileTabs.getElementsByClassName("file-tab")
+    const contents = this.codeOutput.getElementsByClassName("file-content")
 
-  toggleFavorite(chatId) {
-    const chat = this.chats.find(c => c.id === chatId)
-    if (chat) {
-      chat.favorite = !chat.favorite
-      localStorage.setItem("genie_chats", JSON.stringify(this.chats))
-      this.renderHistoryList()
+    for (let i = 0; i < tabs.length; i++) {
+      tabs[i].classList.toggle("active", tabs[i].textContent === filename)
+      contents[i].classList.toggle("active", contents[i].textContent === filename)
     }
   }
 
-  deleteChat(chatId) {
-    this.chats = this.chats.filter(c => c.id !== chatId)
-    if (this.currentChatId === chatId) {
-      this.chatHistory = []
-      this.currentChatId = null
-      this.renderChat()
-    }
-    localStorage.setItem("genie_chats", JSON.stringify(this.chats))
-    this.renderHistoryList()
-  }
-
-  loadChat(chatId) {
-    const chat = this.chats.find(c => c.id === chatId)
-    if (chat) {
-      this.currentChatId = chatId
-      this.chatHistory = [...chat.history]
-      this.renderChat()
-      this.closeModals()
-      this.outputSection.style.display = "block"
-    }
-  }
-
-  async copyLastResponse() {
-    const lastAiMessage = this.chatHistory[this.chatHistory.length - 1]?.content || ""
+  async copyCode() {
     try {
-      await navigator.clipboard.writeText(lastAiMessage)
+      const activeContent = this.codeOutput.querySelector(".file-content.active")
+      await navigator.clipboard.writeText(activeContent.textContent)
       const originalText = this.copyBtn.textContent
       this.copyBtn.textContent = "הועתק! ✓"
       setTimeout(() => {
@@ -431,9 +280,13 @@ class ChromeGenie {
   }
 
   downloadExtension() {
-    const lastAiMessage = this.chatHistory[this.chatHistory.length - 1]?.content || ""
     try {
-      const files = this.parseGeneratedCode(lastAiMessage)
+      const files = {}
+      const contents = this.codeOutput.getElementsByClassName("file-content")
+      const tabs = this.fileTabs.getElementsByClassName("file-tab")
+      for (let i = 0; i < tabs.length; i++) {
+        files[tabs[i].textContent] = contents[i].textContent
+      }
       this.createAndDownloadZip(files)
     } catch (error) {
       console.error("[ChromeGenie] Download failed:", error)
