@@ -8,14 +8,16 @@ class ChromeGenie {
     this.currentFiles = {}
     this.activeFile = null
 
-    this.initializeElements()
-    this.bindEvents()
-    this.loadSavedApiKey()
+    setTimeout(() => {
+      this.initializeElements()
+      this.bindEvents()
+      this.loadSavedApiKey()
+    }, 100)
   }
 
   loadSettings() {
     const defaultSettings = {
-      model: "gemini-2.5-flash-exp",
+      model: "gemini-1.5-flash", // שינוי המודל البرירת מחדל ל-1.5
       temperature: 0.7,
       maxTokens: 4096,
       unlimitedTokens: false,
@@ -90,34 +92,79 @@ class ChromeGenie {
   }
 
   bindEvents() {
-    this.generateBtn.addEventListener("click", () => this.generateExtension())
-    this.downloadBtn.addEventListener("click", () => this.downloadExtension())
+    if (this.generateBtn) {
+      this.generateBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        this.generateExtension()
+      })
+    }
 
-    this.historyBtn.addEventListener("click", (e) => {
-      e.preventDefault()
-      this.openModal("historyModal")
-    })
-    this.apiKeyBtn.addEventListener("click", (e) => {
-      e.preventDefault()
-      this.openModal("apiKeyModal")
-    })
-    this.settingsBtn.addEventListener("click", (e) => {
-      e.preventDefault()
-      this.openModal("settingsModal")
-    })
+    if (this.downloadBtn) {
+      this.downloadBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        this.downloadExtension()
+      })
+    }
+
+    if (this.historyBtn) {
+      this.historyBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        console.log("[v0] Opening modal: historyModal")
+        this.openModal("historyModal")
+      })
+    }
+
+    if (this.apiKeyBtn) {
+      this.apiKeyBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        console.log("[v0] Opening modal: apiKeyModal")
+        this.openModal("apiKeyModal")
+      })
+    }
+
+    if (this.settingsBtn) {
+      this.settingsBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        console.log("[v0] Opening modal: settingsModal")
+        this.openModal("settingsModal")
+      })
+    }
 
     document.querySelectorAll(".close-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.preventDefault()
+        e.stopPropagation()
         this.closeModal(e.target.dataset.modal)
       })
     })
 
-    this.saveApiKeyBtn.addEventListener("click", () => this.validateAndSaveApiKey())
-    this.apiKeyInput.addEventListener("input", () => this.onApiKeyChange())
+    if (this.saveApiKeyBtn) {
+      this.saveApiKeyBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        this.validateAndSaveApiKey()
+      })
+    }
 
-    this.saveSettingsBtn.addEventListener("click", () => this.saveUserSettings())
-    this.resetSettingsBtn.addEventListener("click", () => this.resetSettings())
+    if (this.apiKeyInput) {
+      this.apiKeyInput.addEventListener("input", () => this.onApiKeyChange())
+    }
+
+    if (this.saveSettingsBtn) {
+      this.saveSettingsBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        this.saveUserSettings()
+      })
+    }
+
+    if (this.resetSettingsBtn) {
+      this.resetSettingsBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        this.resetSettings()
+      })
+    }
 
     this.temperatureSlider.addEventListener("input", (e) => {
       this.temperatureValue.textContent = e.target.value
@@ -147,6 +194,7 @@ class ChromeGenie {
 
     window.addEventListener("click", (e) => {
       if (e.target.classList.contains("modal")) {
+        e.preventDefault()
         this.closeModal(e.target.id)
       }
     })
@@ -231,8 +279,9 @@ class ChromeGenie {
     this.saveApiKeyBtn.textContent = "בודק..."
 
     try {
+      const testModel = "gemini-1.5-flash" // שימוש במודל יציב לבדיקה
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${this.settings.model}:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: {
@@ -262,6 +311,7 @@ class ChromeGenie {
         throw new Error("מפתח לא תקין")
       }
     } catch (error) {
+      console.error("[v0] API key validation error:", error)
       this.showApiStatus("מפתח לא תקין ✗", "error")
       this.isApiKeyValid = false
       localStorage.removeItem("api_key_valid")
@@ -364,7 +414,7 @@ class ChromeGenie {
           ? "Please respond in English only."
           : ""
 
-    const prompt = `${languagePrompt}\nצור תוסף כروم מלא ופונקציונלי על בסיס הרעיון: "${idea}"\n\nאנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:\n\n1. manifest.json - עם Manifest V3\n2. popup.html - ממשק משתמש נקי ופונקציונלי\n3. popup.js - כל הלוגיקה הנדרשת\n4. styles.css - עיצוב יפה ומודרני\n\nדרישות:\n- השתמש ב-Manifest V3 בלבד\n- קוד נקי וקריא עם הערות בעברית\n- ממשק משתמש פשוט ואינטואיטיבי\n- פונקציונליות מלאה ומוכנה לשימוש\n- עיצוב מודרני ונעים לעין\n\nהצג את הקבצים בפורמט הבא:\n=== manifest.json ===\n[קוד]\n\n=== popup.html ===\n[קוד]\n\n=== popup.js ===\n[קוד]\n\n=== styles.css ===\n[קוד]`
+    const prompt = `${languagePrompt}\nצור תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"\n\nאנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:\n\n1. manifest.json - עם Manifest V3\n2. popup.html - ממשק משתמש נקי ופונקציונלי\n3. popup.js - כל הלוגיקה הנדרשת\n4. styles.css - עיצוב יפה ומודרני\n\nדרישות:\n- השתמש ב-Manifest V3 בלבד\n- קוד נקי וקריא עם הערות בעברית\n- ממשק משתמש פשוט ואינטואיטיבי\n- פונקציונליות מלאה ומוכנה לשימוש\n- עיצוב מודרני ונעים לעין\n\nהצג את הקבצים בפורמט הבא:\n=== manifest.json ===\n[קוד]\n\n=== popup.html ===\n[קוד]\n\n=== popup.js ===\n[קוד]\n\n=== styles.css ===\n[קוד]`
 
     const generationConfig = {
       temperature: this.settings.temperature,
@@ -376,8 +426,14 @@ class ChromeGenie {
       generationConfig.maxOutputTokens = this.settings.maxTokens
     }
 
+    let modelToUse = this.settings.model
+    if (modelToUse === "gemini-2.5-flash-exp") {
+      // אם המודל החדש לא זמין, נשתמש במודל יציב
+      modelToUse = "gemini-1.5-flash"
+    }
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${this.settings.model}:generateContent?key=${this.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${this.apiKey}`,
       {
         method: "POST",
         headers: {
@@ -400,6 +456,7 @@ class ChromeGenie {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      console.error("[v0] API Error:", errorData)
       throw new Error(errorData.error?.message || "שגיאה בקריאה ל-API של Gemini")
     }
 
@@ -619,9 +676,19 @@ class ChromeGenie {
 const script = document.createElement("script")
 script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
 script.onload = () => {
-  window.JSZip = window.JSZip || {}
-  document.addEventListener("DOMContentLoaded", () => {
+  console.log("[v0] JSZip loaded successfully")
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("[v0] DOM loaded, initializing ChromeGenie")
+      window.chromegenie = new ChromeGenie()
+    })
+  } else {
+    console.log("[v0] DOM already loaded, initializing ChromeGenie")
     window.chromegenie = new ChromeGenie()
-  })
+  }
+}
+script.onerror = () => {
+  console.error("[v0] Failed to load JSZip library")
+  alert("שגיאה בטעינת ספריית JSZip. אנא רענן את הדף.")
 }
 document.head.appendChild(script)
