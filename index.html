@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChromeGenie</title>
+    <title>ChromeGenie - צור תוספי כרום בעזרת AI</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,93 +13,130 @@
                 <h1>ChromeGenie</h1>
                 <p>צור תוספי כרום מותאמים אישית בעזרת AI</p>
             </div>
-            <div class="top-buttons">
-                <button id="historyBtn" class="round-btn">📜</button>
-                <button id="apiBtn" class="round-btn">🔑</button>
-                <button id="settingsBtn" class="round-btn">⚙️</button>
+            <!-- הוספת כפתורים עגולים בצד ימין למעלה -->
+            <div class="header-buttons">
+                <button id="historyBtn" class="round-btn" title="היסטוריית צ'אטים">
+                    📚
+                </button>
+                <button id="apiKeyBtn" class="round-btn" title="מפתח API">
+                    🔑
+                </button>
+                <button id="settingsBtn" class="round-btn" title="הגדרות">
+                    ⚙️
+                </button>
             </div>
         </header>
 
-        <div class="creation-area">
-            <h2>תאר את הרעיון שלך</h2>
-
-            <div class="input-group">
-                <label for="ideaInput">מה התוסף שלך יעשה?</label>
-                <textarea id="ideaInput" placeholder="תאר את הרעיון שלך כאן..."></textarea>
-            </div>
-
-            <button id="generateBtn" class="generate-btn">
-                <span class="btn-text">צור תוסף</span>
-                <span class="btn-loader" style="display: none;">🔄</span>
-            </button>
-        </div>
-
-        <div id="outputSection" class="output-section" style="display: none;">
-            <div class="output-header">
-                <h3>✨ התוסף שלך מוכן!</h3>
-                <div class="output-actions">
-                    <button id="copyBtn" class="action-btn">📋 העתק</button>
-                    <button id="downloadBtn" class="action-btn">💾 הורד</button>
+        <main>
+            <section class="creation-area">
+                <h2>תאר את הרעיון שלך</h2>
+                
+                <div class="input-group">
+                    <label for="ideaInput">מה התוסף שלך יעשה?</label>
+                    <textarea id="ideaInput" placeholder="למשל: תוסף שמסמן מילים קשות בטקסט ומציג הסבר עליהן, או תוסף שמשנה את צבע הרקע של כל האתרים לצבע שאני אוהב..."></textarea>
                 </div>
-            </div>
+                
+                <button id="generateBtn" class="generate-btn">
+                    <span class="btn-text">צור תוסף</span>
+                    <span class="btn-loader" style="display: none;">🔄</span>
+                </button>
+            </section>
 
-            <div id="chatContainer" class="chat-container"></div>
+            <!-- הוספת תצוגת תשובת AI מחוץ לעורך הקוד -->
+            <section class="ai-response-section" id="aiResponseSection" style="display: none;">
+                <div class="ai-response-header">
+                    <h3>🤖 תשובת ה-AI</h3>
+                </div>
+                <div class="ai-response-content" id="aiResponseContent"></div>
+            </section>
 
-            <div class="follow-up-input">
-                <input type="text" id="followUpInput" placeholder="תקן או הוסף פרטים...">
-                <button id="sendFollowUpBtn" class="send-btn">שלח</button>
-            </div>
-        </div>
-
-        <!-- Modal for History -->
-        <div id="historyModal" class="modal">
-            <div class="modal-content">
-                <h3>היסטוריית צ'אטים</h3>
-                <div id="historyList" class="history-list"></div>
-                <button class="close-btn" onclick="document.getElementById('historyModal').style.display='none'">×</button>
-            </div>
-        </div>
-
-        <!-- Modal for API Key -->
-        <div id="apiModal" class="modal">
-            <div class="modal-content">
-                <h3>מפתח API</h3>
-                <div class="api-group">
-                    <label for="apiKey">מפתח Gemini API</label>
-                    <div class="api-input-container">
-                        <input type="text" id="apiKey" placeholder="הכנס מפתח API">
-                        <button id="validateApiBtn" class="validate-btn">שמור</button>
+            <!-- עורך קוד חדש עם קבצים נפרדים -->
+            <section class="code-editor-section" id="codeEditorSection" style="display: none;">
+                <div class="editor-header">
+                    <h3>📝 עורך הקוד</h3>
+                    <div class="editor-actions">
+                        <button id="downloadBtn" class="action-btn">💾 הורד ZIP</button>
                     </div>
-                    <small>המפתח נשמר מקומית בדפדפן שלך בלבד</small>
-                    <div id="apiStatus" class="api-status"></div>
                 </div>
-                <button class="close-btn" onclick="document.getElementById('apiModal').style.display='none'">×</button>
+                <div class="file-tabs" id="fileTabs"></div>
+                <div class="code-editor" id="codeEditor">
+                    <pre id="codeContent"></pre>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- חלוניות מודאליות -->
+    <!-- חלונית היסטוריית צ'אטים -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📚 היסטוריית צ'אטים</h3>
+                <button class="close-btn" data-modal="historyModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="chat-filters">
+                    <button id="allChatsBtn" class="filter-btn active">כל הצ'אטים</button>
+                    <button id="favoriteChatsBtn" class="filter-btn">מועדפים</button>
+                </div>
+                <div id="chatsList" class="chats-list">
+                    <div class="empty-state">אין צ'אטים שמורים עדיין</div>
+                </div>
             </div>
         </div>
+    </div>
 
-        <!-- Modal for Settings -->
-        <div id="settingsModal" class="modal">
-            <div class="modal-content">
-                <h3>הגדרות</h3>
-                <div class="settings-group">
-                    <label for="modelSelect">מודל:</label>
+    <!-- חלונית מפתח API -->
+    <div id="apiKeyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔑 מפתח Gemini API</h3>
+                <button class="close-btn" data-modal="apiKeyModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="apiKeyInput">מפתח API</label>
+                    <input type="password" id="apiKeyInput" placeholder="הכנס את מפתח ה-API שלך">
+                    <div id="apiStatus" class="api-status"></div>
+                    <small>המפתח נשמר מקומית בדפדפן שלך בלבד</small>
+                </div>
+                <button id="saveApiKeyBtn" class="save-btn">שמור מפתח</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- חלונית הגדרות -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ הגדרות</h3>
+                <button class="close-btn" data-modal="settingsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="modelSelect">מודל AI</label>
                     <select id="modelSelect">
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (מומלץ)</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                         <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                     </select>
-                    <label for="temperatureInput">טמפרטורה (0-1):</label>
-                    <input type="range" id="temperatureInput" min="0" max="1" step="0.1" value="0.7">
-                    <label for="topPInput">Top P (0-1):</label>
-                    <input type="range" id="topPInput" min="0" max="1" step="0.05" value="0.95">
-                    <label for="topKInput">Top K (1-100):</label>
-                    <input type="range" id="topKInput" min="1" max="100" value="40">
-                    <label for="maxTokensInput">מספר מקסימלי של טוקנים:</label>
-                    <input type="range" id="maxTokensInput" min="100" max="2048" value="1024">
-                    <label for="unlimitedTokensCheckbox">בטל הגבלת טוקנים:</label>
-                    <input type="checkbox" id="unlimitedTokensCheckbox">
                 </div>
-                <button id="saveSettingsBtn" class="save-btn">שמור</button>
-                <button class="close-btn" onclick="document.getElementById('settingsModal').style.display='none'">×</button>
+                <div class="setting-group">
+                    <label for="temperatureSlider">טמפרטורה (יצירתיות)</label>
+                    <input type="range" id="temperatureSlider" min="0" max="1" step="0.1" value="0.7">
+                    <span id="temperatureValue">0.7</span>
+                </div>
+                <div class="setting-group">
+                    <label for="maxTokensInput">מקסימום טוקנים</label>
+                    <input type="number" id="maxTokensInput" min="100" max="8192" value="4096">
+                </div>
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="autoSaveChats" checked>
+                        שמור צ'אטים אוטומטית
+                    </label>
+                </div>
+                <button id="saveSettingsBtn" class="save-btn">שמור הגדרות</button>
             </div>
         </div>
     </div>
