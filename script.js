@@ -474,13 +474,24 @@ class ChromeGenie {
 
 בקשת המשתמש החדשה: ${idea}
 
-אני אעדכן את התוסף לפי הבקשה החדשה ואצור את כל הקבצים המעודכנים.
+אני אעדכן את התוסף לפי הבקשה החדשה. אני יכול ליצור קבצים חדשים, לערוך קבצים קיימים, ולשנות את הפונקציונליות.
 
-לאחר יצירת התוסף המעודכן, תוכל להוריד את קובץ ה-ZIP החדש ולהתקין את התוסף על ידי:
-1. הורדת קובץ ה-ZIP
-2. פתיחת דף התוספים בכרום (chrome://extensions)
-3. גרירת קובץ ה-ZIP לדף התוספים
-4. התוסף יותקן אוטומטית!`
+אני אצור את כל הקבצים הנדרשים עם קוד מלא ומוכן לשימוש, ואארוז אותם לקובץ ZIP להורדה.
+
+הצגת הקבצים:
+=== manifest.json ===
+[קוד מלא]
+
+=== popup.html ===
+[קוד מלא]
+
+=== popup.js ===
+[קוד מלא]
+
+=== styles.css ===
+[קוד מלא]
+
+לאחר יצירת התוסף, המשתמש יוכל להוריד את קובץ ה-ZIP ולהתקין את התוסף על ידי גרירת הקובץ לדף התוספים בכרום.`
     } else {
       prompt = `אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
 
@@ -596,14 +607,12 @@ class ChromeGenie {
           !line.includes("popup.html") &&
           !line.includes("popup.js") &&
           !line.includes("styles.css") &&
-          !line.startsWith("```") &&
-          !line.includes("chrome://extensions") &&
           line.trim() !== "",
       )
-      .slice(0, 15)
+      .slice(0, 10)
       .join("\n")
 
-    this.aiResponseContent.textContent = aiResponse || "בשמחה! אצור לך תוסף Chrome מלא ופונקציונלי. התוסף מוכן להורדה!"
+    this.aiResponseContent.textContent = aiResponse || "התוסף נוצר בהצלחה!"
   }
 
   parseAndDisplayCode(code) {
@@ -637,163 +646,7 @@ class ChromeGenie {
     })
 
     this.activeFile = filename
-    this.renderCodeWithHighlighting(this.currentFiles[filename] || "", filename)
-  }
-
-  renderCodeWithHighlighting(code, filename) {
-    const lines = code.split("\n")
-    const language = this.getLanguageFromFilename(filename)
-
-    const highlightedCode = lines
-      .map((line, index) => {
-        const lineNumber = index + 1
-        const highlightedLine = this.highlightSyntax(line, language)
-        return `<div class="code-line">
-        <span class="line-number">${lineNumber}</span>
-        <span class="line-content">${highlightedLine}</span>
-      </div>`
-      })
-      .join("")
-
-    this.codeContent.innerHTML = highlightedCode
-    this.codeContent.contentEditable = true
-    this.codeContent.style.direction = "ltr"
-    this.codeContent.style.textAlign = "left"
-  }
-
-  getLanguageFromFilename(filename) {
-    const ext = filename.split(".").pop().toLowerCase()
-    const langMap = {
-      js: "javascript",
-      json: "json",
-      html: "html",
-      css: "css",
-      txt: "text",
-    }
-    return langMap[ext] || "text"
-  }
-
-  highlightSyntax(line, language) {
-    if (language === "javascript") {
-      return line
-        .replace(
-          /\b(const|let|var|function|if|else|for|while|return|true|false|null|undefined)\b/g,
-          '<span class="keyword">$1</span>',
-        )
-        .replace(/"([^"]*)"/g, '<span class="string">"$1"</span>')
-        .replace(/'([^']*)'/g, "<span class=\"string\">'$1'</span>")
-        .replace(/\/\/(.*)$/g, '<span class="comment">//$1</span>')
-        .replace(/\b(\d+)\b/g, '<span class="number">$1</span>')
-    } else if (language === "json") {
-      return line
-        .replace(/"([^"]*)":/g, '<span class="property">"$1"</span>:')
-        .replace(/:\s*"([^"]*)"/g, ': <span class="string">"$1"</span>')
-        .replace(/:\s*(\d+)/g, ': <span class="number">$1</span>')
-        .replace(/:\s*(true|false|null)/g, ': <span class="keyword">$1</span>')
-    } else if (language === "html") {
-      return line
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/&lt;(\/?[a-zA-Z][^&gt;]*)&gt;/g, '<span class="tag">&lt;$1&gt;</span>')
-        .replace(/(\w+)=/g, '<span class="attribute">$1</span>=')
-        .replace(/"([^"]*)"/g, '<span class="string">"$1"</span>')
-    } else if (language === "css") {
-      return line
-        .replace(/([a-zA-Z-]+)\s*:/g, '<span class="property">$1</span>:')
-        .replace(/:\s*([^;]+);/g, ': <span class="value">$1</span>;')
-        .replace(/\/\*(.|\n)*?\*\//g, '<span class="comment">$&</span>')
-        .replace(/\{|\}/g, '<span class="bracket">$&</span>')
-    }
-    return line
-  }
-
-  saveCodeChanges() {
-    if (this.activeFile && this.codeContent) {
-      const textContent = this.codeContent.innerText || this.codeContent.textContent
-      this.currentFiles[this.activeFile] = textContent
-
-      this.updateAIMemory()
-    }
-  }
-
-  updateAIMemory() {
-    if (this.currentChat) {
-      this.currentChat.files = { ...this.currentFiles }
-      this.saveChats()
-    }
-  }
-
-  async continueChat() {
-    const continueIdea = this.continueInput.value.trim()
-
-    if (!continueIdea) {
-      alert("אנא כתב מה תרצה לשנות או להוסיף")
-      return
-    }
-
-    if (!this.isApiKeyValid) {
-      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
-      return
-    }
-
-    this.setContinueButtonLoading(true)
-
-    try {
-      const previousContext = `רעיון מקורי: ${this.ideaInput.value}\nתשובה קודמת: ${this.aiResponseContent.textContent}`
-      const response = await this.callGeminiAPI(continueIdea, true, previousContext)
-
-      this.displayAIResponse(response)
-      this.parseAndDisplayCode(response)
-
-      if (this.settings.autoSaveChats) {
-        this.saveCurrentChat(this.ideaInput.value + " + " + continueIdea, response)
-      }
-
-      this.continueInput.value = ""
-      this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
-    } catch (error) {
-      console.error("[v0] Error continuing chat:", error)
-      alert("שגיאה בהמשך השיחה: " + error.message)
-    } finally {
-      this.setContinueButtonLoading(false)
-    }
-  }
-
-  handleTextSelection() {
-    const selection = window.getSelection()
-    const selectedText = selection.toString().trim()
-
-    if (selectedText && this.codeQuestionBtn) {
-      this.codeQuestionBtn.style.display = "block"
-      this.selectedText = selectedText
-    } else if (this.codeQuestionBtn) {
-      this.codeQuestionBtn.style.display = "none"
-    }
-  }
-
-  async askCodeQuestion() {
-    const question = this.questionInput.value.trim()
-    if (!question || !this.selectedText) {
-      alert("אנא כתב שאלה על הקוד שבחרת")
-      return
-    }
-
-    if (!this.isApiKeyValid) {
-      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
-      return
-    }
-
-    try {
-      const prompt = `אתה ChromeGenie AI. המשתמש בחר את הקוד הבא: "${this.selectedText}" ושאל: "${question}". אנא ענה בעברית על השאלה.`
-      const response = await this.callGeminiAPI(prompt)
-
-      alert(`תשובת ה-AI:\n\n${response}`)
-      this.closeModal("questionModal")
-      this.questionInput.value = ""
-    } catch (error) {
-      alert("שגיאה בשאלה: " + error.message)
-    }
+    this.codeContent.textContent = this.currentFiles[filename] || ""
   }
 
   saveCurrentChat(idea, response) {
@@ -952,6 +805,91 @@ class ChromeGenie {
     })
   }
 
+  async continueChat() {
+    const continueIdea = this.continueInput.value.trim()
+
+    if (!continueIdea) {
+      alert("אנא כתב מה תרצה לשנות או להוסיף")
+      return
+    }
+
+    if (!this.isApiKeyValid) {
+      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
+      return
+    }
+
+    this.setContinueButtonLoading(true)
+
+    try {
+      const previousContext = `רעיון מקורי: ${this.ideaInput.value}\nתשובה קודמת: ${this.aiResponseContent.textContent}`
+      const response = await this.callGeminiAPI(continueIdea, true, previousContext)
+
+      this.displayAIResponse(response)
+      this.parseAndDisplayCode(response)
+
+      if (this.settings.autoSaveChats) {
+        this.saveCurrentChat(this.ideaInput.value + " + " + continueIdea, response)
+      }
+
+      this.continueInput.value = ""
+      this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
+    } catch (error) {
+      console.error("[v0] Error continuing chat:", error)
+      alert("שגיאה בהמשך השיחה: " + error.message)
+    } finally {
+      this.setContinueButtonLoading(false)
+    }
+  }
+
+  handleTextSelection() {
+    const selection = window.getSelection()
+    const selectedText = selection.toString().trim()
+
+    if (selectedText && this.codeQuestionBtn) {
+      this.codeQuestionBtn.style.display = "block"
+      this.selectedText = selectedText
+    } else if (this.codeQuestionBtn) {
+      this.codeQuestionBtn.style.display = "none"
+    }
+  }
+
+  async askCodeQuestion() {
+    const question = this.questionInput.value.trim()
+    if (!question || !this.selectedText) {
+      alert("אנא כתב שאלה על הקוד שבחרת")
+      return
+    }
+
+    if (!this.isApiKeyValid) {
+      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
+      return
+    }
+
+    try {
+      const prompt = `אתה ChromeGenie AI. המשתמש בחר את הקוד הבא: "${this.selectedText}" ושאל: "${question}". אנא ענה בעברית על השאלה.`
+      const response = await this.callGeminiAPI(prompt)
+
+      alert(`תשובת ה-AI:\n\n${response}`)
+      this.closeModal("questionModal")
+      this.questionInput.value = ""
+    } catch (error) {
+      alert("שגיאה בשאלה: " + error.message)
+    }
+  }
+
+  saveCodeChanges() {
+    if (this.activeFile && this.codeContent) {
+      this.currentFiles[this.activeFile] = this.codeContent.value
+    }
+  }
+
+  editLastInstruction() {
+    if (this.ideaInput) {
+      this.ideaInput.focus()
+      this.ideaInput.select()
+    }
+  }
+
   stopGeneration() {
     this.isGenerating = false
     this.setGenerateButtonLoading(false)
@@ -960,15 +898,12 @@ class ChromeGenie {
 
   setGenerateButtonLoading(loading) {
     this.generateBtn.disabled = loading
-    const stopBtn = document.getElementById("stopGenerationBtn")
     if (loading) {
       this.btnText.style.display = "none"
       this.btnLoader.style.display = "inline"
-      if (stopBtn) stopBtn.style.display = "inline-block"
     } else {
       this.btnText.style.display = "inline"
       this.btnLoader.style.display = "none"
-      if (stopBtn) stopBtn.style.display = "none"
     }
   }
 
@@ -977,7 +912,7 @@ class ChromeGenie {
     if (loading) {
       this.continueBtn.innerHTML = '<div class="spinner"></div> מעדכן...'
     } else {
-      this.continueBtn.innerHTML = "שלח"
+      this.continueBtn.innerHTML = "המשך שיחה"
     }
   }
 }
