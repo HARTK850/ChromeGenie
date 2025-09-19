@@ -20,14 +20,18 @@ body {
 
 header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center; /* מרכז את הכותרת */
   align-items: center;
   margin-bottom: 3rem;
 }
 
 .logo {
   text-align: center;
-  /* הסרת flex: 1 כי הכפתורים לא בהדר יותר */
+  width: 100%; /* הכותרת תתפוס את כל הרוחב */
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .logo h1 {
@@ -36,12 +40,14 @@ header {
   margin-bottom: 0.5rem;
   font-weight: 700;
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  text-align: center;
 }
 
 .logo p {
   font-size: 1.3rem;
   color: rgba(255, 255, 255, 0.9);
   font-weight: 300;
+  text-align: center;
 }
 
 .creation-area {
@@ -687,14 +693,14 @@ header {
 }
 
 .round-btn {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   color: #4a5568;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
@@ -710,6 +716,64 @@ header {
 
 .round-btn:active {
   transform: translateY(-1px);
+}
+
+.continue-chat-section {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: 1.5rem;
+}
+
+.continue-chat-section h4 {
+  color: #4a5568;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.continue-input {
+  width: 100%;
+  min-height: 80px;
+  padding: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  resize: vertical;
+  transition: all 0.3s ease;
+  background: white;
+  margin-bottom: 1rem;
+}
+
+.continue-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.continue-btn {
+  padding: 0.8rem 1.5rem;
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.continue-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(72, 187, 120, 0.3);
+}
+
+.continue-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
 }
 
 @media (max-width: 768px) {
@@ -731,9 +795,9 @@ header {
   }
 
   .round-btn {
-    width: 50px;
-    height: 50px;
-    font-size: 1.2rem;
+    width: 45px;
+    height: 45px;
+    font-size: 1.1rem;
   }
 
   header {
