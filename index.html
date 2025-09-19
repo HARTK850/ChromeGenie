@@ -3,20 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChromeGenie - צור תוספי כרום בעזרת AI</title>
+    <title>ChromeGenie - צור תוספי כروم בעזרת AI</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <div class="logo">
-                <h1>🧞‍♂️ ChromeGenie</h1>
-                <p>צור תוספי כروم מותאמים אישית בעזרת AI</p>
+                <h1 style="text-align: center;">🧞‍♂️ ChromeGenie</h1>
+                <p style="text-align: center;">צור תוספי Chrome מותאמים אישית בעזרת AI</p>
             </div>
         </header>
 
         <main>
-            <!-- הוספת הכפתורים העגולים מתחת לכותרת ומעל שדה הקלט -->
             <div class="action-buttons">
                 <button id="historyBtn" class="round-btn" title="היסטוריית צ'אטים">
                     📚
@@ -43,7 +42,6 @@
                 </button>
             </section>
 
-            <!-- הוספת תצוגת תשובת AI מחוץ לעורך הקוד -->
             <section class="ai-response-section" id="aiResponseSection" style="display: none;">
                 <div class="ai-response-header">
                     <h3>🤖 תשובת ה-AI</h3>
@@ -51,7 +49,6 @@
                 <div class="ai-response-content" id="aiResponseContent"></div>
             </section>
 
-            <!-- עורך קוד חדש עם קבצים נפרדים -->
             <section class="code-editor-section" id="codeEditorSection" style="display: none;">
                 <div class="editor-header">
                     <h3>📝 עורך הקוד</h3>
@@ -67,8 +64,6 @@
         </main>
     </div>
 
-    <!-- חלוניות מודאליות -->
-    <!-- חלונית היסטוריית צ'אטים -->
     <div id="historyModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -87,7 +82,6 @@
         </div>
     </div>
 
-    <!-- חלונית מפתח API -->
     <div id="apiKeyModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -106,7 +100,6 @@
         </div>
     </div>
 
-    <!-- חלונית הגדרות -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
