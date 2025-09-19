@@ -3,27 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChromeGenie - צור תוספי כרום בעזרת AI</title>
+    <title>ChromeGenie - צור תוספי כروم בעזרת AI</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <div class="logo">
-                <h1 style="text-align: center;">ChromeGenie</h1>
+                <h1 style="text-align: center;">🧞‍♂️ ChromeGenie</h1>
                 <p style="text-align: center;">צור תוספי Chrome מותאמים אישית בעזרת AI</p>
             </div>
         </header>
 
         <main>
             <div class="action-buttons">
-                <button id="historyBtn" class="round-btn" title="היסטוריית צ'אטים">
+                <button id="historyBtn" class="round-btn small" title="היסטוריית צ'אטים">
                     📚
                 </button>
-                <button id="apiKeyBtn" class="round-btn" title="מפתח API">
+                <button id="apiKeyBtn" class="round-btn small" title="מפתח API">
                     🔑
                 </button>
-                <button id="settingsBtn" class="round-btn" title="הגדרות">
+                <button id="settingsBtn" class="round-btn small" title="הגדרות">
                     ⚙️
                 </button>
             </div>
@@ -38,8 +38,15 @@
                 
                 <button id="generateBtn" class="generate-btn">
                     <span class="btn-text">צור תוסף</span>
-                    <span class="btn-loader" style="display: none;">🔄</span>
+                    <span class="btn-loader" style="display: none;">
+                        <div class="spinner"></div>
+                    </span>
                 </button>
+                
+                <div class="generation-controls" style="display: none;">
+                    <button id="stopGenerationBtn" class="control-btn">⏹️ הפסק יצירה</button>
+                    <button id="editInstructionBtn" class="control-btn">✏️ ערוך הנחיה</button>
+                </div>
             </section>
 
             <section class="ai-response-section" id="aiResponseSection" style="display: none;">
@@ -54,19 +61,19 @@
                     <h3>📝 עורך הקוד</h3>
                     <div class="editor-actions">
                         <button id="downloadBtn" class="action-btn">💾 הורד ZIP</button>
+                        <button id="codeQuestionBtn" class="action-btn" style="display: none;">❓ שאל על הקוד</button>
                     </div>
                 </div>
                 <div class="file-tabs" id="fileTabs"></div>
                 <div class="code-editor" id="codeEditor">
-                    <pre id="codeContent"></pre>
+                    <textarea id="codeContent" class="code-textarea"></textarea>
                 </div>
             </section>
 
-            <!-- הוספת חלק המשך השיחה -->
             <section class="continue-chat-section" id="continueChatSection" style="display: none;">
                 <h4>💬 המשך שיחה עם ה-AI</h4>
                 <textarea id="continueInput" class="continue-input" placeholder="מה תרצה לשנות או להוסיף לתוסף? למשל: 'הוסף כפתור לשינוי צבע', 'תקן את הבאג בפונקציה', 'הוסף אפשרות שמירה'..."></textarea>
-                <button id="continueBtn" class="continue-btn">המשך שיחה</button>
+                <button id="continueBtn" class="generate-btn">המשך שיחה</button>
             </section>
         </main>
     </div>
@@ -119,14 +126,10 @@
                     <select id="modelSelect">
                         <option value="gemini-2.5-flash">Gemini 2.5 Flash (מומלץ)</option>
                         <option value="gemini-2.5-flash-exp">Gemini 2.5 Flash Experimental</option>
-                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
+                        <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</option>
                         <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                         <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                        <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
-                        <option value="claude-3-sonnet">Claude 3 Sonnet</option>
-                        <option value="claude-3-haiku">Claude 3 Haiku</option>
-                        <option value="gpt-4">GPT-4</option>
-                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                     </select>
                 </div>
                 <div class="setting-group">
@@ -153,33 +156,29 @@
                     <span id="topKValue">40</span>
                 </div>
                 <div class="setting-group">
-                    <label for="responseLanguage">שפת התשובה</label>
-                    <select id="responseLanguage">
-                        <option value="hebrew">עברית</option>
-                        <option value="english">אנגלית</option>
-                        <option value="mixed">מעורב</option>
-                    </select>
-                </div>
-                <div class="setting-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="autoSaveChats" checked>
                         שמור צ'אטים אוטומטית
                     </label>
                 </div>
-                <div class="setting-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="darkMode">
-                        מצב כהה
-                    </label>
-                </div>
-                <div class="setting-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="showAdvancedOptions">
-                        הצג אפשרויות מתקדמות
-                    </label>
-                </div>
                 <button id="saveSettingsBtn" class="save-btn">שמור הגדרות</button>
                 <button id="resetSettingsBtn" class="reset-btn">איפוס הגדרות</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="questionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>❓ שאל על הקוד</h3>
+                <button class="close-btn" data-modal="questionModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="questionInput">מה תרצה לדעת על הקוד שבחרת?</label>
+                    <textarea id="questionInput" placeholder="למשל: 'מה עושה הפונקציה הזאת?', 'איך אני יכול לשפר את הקוד?', 'מה המשמעות של השורה הזאת?'..."></textarea>
+                </div>
+                <button id="askQuestionBtn" class="save-btn">שאל את ה-AI</button>
             </div>
         </div>
     </div>
