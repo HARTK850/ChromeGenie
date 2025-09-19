@@ -7,6 +7,7 @@ class ChromeGenie {
     this.currentChat = null
     this.currentFiles = {}
     this.activeFile = null
+    this.isGenerating = false
 
     setTimeout(() => {
       this.initializeElements()
@@ -23,10 +24,7 @@ class ChromeGenie {
       unlimitedTokens: false,
       topP: 0.95,
       topK: 40,
-      responseLanguage: "hebrew",
       autoSaveChats: true,
-      darkMode: false,
-      showAdvancedOptions: false,
     }
     const saved = localStorage.getItem("chromegenie_settings")
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings
@@ -83,16 +81,18 @@ class ChromeGenie {
     this.topPValue = document.getElementById("topPValue")
     this.topKSlider = document.getElementById("topKSlider")
     this.topKValue = document.getElementById("topKValue")
-    this.responseLanguage = document.getElementById("responseLanguage")
     this.autoSaveChats = document.getElementById("autoSaveChats")
-    this.darkMode = document.getElementById("darkMode")
-    this.showAdvancedOptions = document.getElementById("showAdvancedOptions")
     this.saveSettingsBtn = document.getElementById("saveSettingsBtn")
     this.resetSettingsBtn = document.getElementById("resetSettingsBtn")
 
     this.chatsList = document.getElementById("chatsList")
     this.allChatsBtn = document.getElementById("allChatsBtn")
     this.favoriteChatsBtn = document.getElementById("favoriteChatsBtn")
+
+    this.codeQuestionBtn = document.getElementById("codeQuestionBtn")
+    this.questionModal = document.getElementById("questionModal")
+    this.questionInput = document.getElementById("questionInput")
+    this.askQuestionBtn = document.getElementById("askQuestionBtn")
   }
 
   bindEvents() {
@@ -117,30 +117,24 @@ class ChromeGenie {
       })
     }
 
-    if (this.historyBtn) {
-      this.historyBtn.addEventListener("click", (e) => {
+    if (this.editInstructionBtn) {
+      this.editInstructionBtn.addEventListener("click", (e) => {
         e.preventDefault()
-        e.stopPropagation()
-        console.log("[v0] Opening modal: historyModal")
-        this.openModal("historyModal")
+        this.editLastInstruction()
       })
     }
 
-    if (this.apiKeyBtn) {
-      this.apiKeyBtn.addEventListener("click", (e) => {
+    if (this.stopGenerationBtn) {
+      this.stopGenerationBtn.addEventListener("click", (e) => {
         e.preventDefault()
-        e.stopPropagation()
-        console.log("[v0] Opening modal: apiKeyModal")
-        this.openModal("apiKeyModal")
+        this.stopGeneration()
       })
     }
 
-    if (this.settingsBtn) {
-      this.settingsBtn.addEventListener("click", (e) => {
+    if (this.askQuestionBtn) {
+      this.askQuestionBtn.addEventListener("click", (e) => {
         e.preventDefault()
-        e.stopPropagation()
-        console.log("[v0] Opening modal: settingsModal")
-        this.openModal("settingsModal")
+        this.askCodeQuestion()
       })
     }
 
@@ -209,10 +203,18 @@ class ChromeGenie {
         this.closeModal(e.target.id)
       }
     })
+
+    if (this.codeContent) {
+      this.codeContent.addEventListener("mouseup", () => {
+        this.handleTextSelection()
+      })
+      this.codeContent.addEventListener("input", () => {
+        this.saveCodeChanges()
+      })
+    }
   }
 
   openModal(modalId) {
-    console.log("[v0] Opening modal:", modalId)
     const modal = document.getElementById(modalId)
     if (modal) {
       modal.style.display = "block"
@@ -223,6 +225,8 @@ class ChromeGenie {
         this.loadSettingsModal()
       } else if (modalId === "historyModal") {
         this.loadHistoryModal()
+      } else if (modalId === "questionModal") {
+        this.loadQuestionModal()
       }
     } else {
       console.error("[v0] Modal not found:", modalId)
@@ -254,10 +258,7 @@ class ChromeGenie {
     this.topPValue.textContent = this.settings.topP
     this.topKSlider.value = this.settings.topK
     this.topKValue.textContent = this.settings.topK
-    this.responseLanguage.value = this.settings.responseLanguage
     this.autoSaveChats.checked = this.settings.autoSaveChats
-    this.darkMode.checked = this.settings.darkMode
-    this.showAdvancedOptions.checked = this.settings.showAdvancedOptions
 
     this.maxTokensInput.disabled = this.settings.unlimitedTokens
     if (this.settings.unlimitedTokens) {
@@ -267,6 +268,10 @@ class ChromeGenie {
 
   loadHistoryModal() {
     this.renderChatsList()
+  }
+
+  loadQuestionModal() {
+    this.questionInput.value = ""
   }
 
   loadSavedApiKey() {}
@@ -290,7 +295,7 @@ class ChromeGenie {
     this.saveApiKeyBtn.textContent = "בודק..."
 
     try {
-      const testModel = "gemini-1.5-flash" // שימוש במודל יציב לבדיקה
+      const testModel = "gemini-1.5-flash"
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${apiKey}`,
         {
@@ -344,10 +349,7 @@ class ChromeGenie {
     this.settings.unlimitedTokens = this.unlimitedTokens.checked
     this.settings.topP = Number.parseFloat(this.topPSlider.value)
     this.settings.topK = Number.parseInt(this.topKSlider.value)
-    this.settings.responseLanguage = this.responseLanguage.value
     this.settings.autoSaveChats = this.autoSaveChats.checked
-    this.settings.darkMode = this.darkMode.checked
-    this.settings.showAdvancedOptions = this.showAdvancedOptions.checked
 
     this.saveSettings()
 
@@ -383,10 +385,13 @@ class ChromeGenie {
       return
     }
 
+    this.isGenerating = true
     this.setGenerateButtonLoading(true)
 
     try {
       const response = await this.callGeminiAPI(idea)
+
+      if (!this.isGenerating) return
 
       this.displayAIResponse(response)
       this.parseAndDisplayCode(response)
@@ -403,49 +408,27 @@ class ChromeGenie {
       console.error("[v0] Error generating extension:", error)
       alert("שגיאה ביצירת התוסף: " + error.message)
     } finally {
+      this.isGenerating = false
       this.setGenerateButtonLoading(false)
     }
   }
 
-  setGenerateButtonLoading(loading) {
-    this.generateBtn.disabled = loading
-    if (loading) {
-      this.btnText.style.display = "none"
-      this.btnLoader.style.display = "inline"
-    } else {
-      this.btnText.style.display = "inline"
-      this.btnLoader.style.display = "none"
-    }
-  }
-
   async callGeminiAPI(idea, isContinuation = false, previousContext = "") {
-    const languagePrompt =
-      this.settings.responseLanguage === "hebrew"
-        ? "אנא ענה בעברית בלבד."
-        : this.settings.responseLanguage === "english"
-          ? "Please respond in English only."
-          : ""
-
     let prompt
     if (isContinuation) {
-      prompt = `${languagePrompt}
+      prompt = `אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
 
-אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
+בשמחה! אעדכן לך את התוסף לפי הבקשה החדשה.
 
 הקשר הקודם: ${previousContext}
 
 בקשת המשתמש החדשה: ${idea}
 
-אנא עדכן את התוסף לפי הבקשה החדשה. אתה יכול ליצור קבצים חדשים, לערוך קבצים קיימים, או לשנות את הפונקציונליות.
+אני אעדכן את התוסף לפי הבקשה החדשה. אני יכול ליצור קבצים חדשים, לערוך קבצים קיימים, ולשנות את הפונקציונליות.
 
-צור את כל הקבצים הנדרשים עם קוד מלא ומוכן לשימוש:
-- manifest.json (Manifest V3)
-- popup.html 
-- popup.js
-- styles.css
-- קבצים נוספים לפי הצורך
+אני אצור את כל הקבצים הנדרשים עם קוד מלא ומוכן לשימוש, ואארוז אותם לקובץ ZIP להורדה.
 
-הצג את הקבצים בפורמט הבא:
+הצגת הקבצים:
 === manifest.json ===
 [קוד מלא]
 
@@ -458,15 +441,13 @@ class ChromeGenie {
 === styles.css ===
 [קוד מלא]
 
-חשוב: אתה יכול ליצור קבצים ממש ולארוז אותם לקובץ ZIP להורדה. זה בהחלט אפשרי ואתה עושה זאת בהצלחה!`
+לאחר יצירת התוסף, המשתמש יוכל להוריד את קובץ ה-ZIP ולהתקין את התוסף על ידי גרירת הקובץ לדף התוספים בכרום.`
     } else {
-      prompt = `${languagePrompt}
+      prompt = `אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
 
-אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
+בשמחה! אצור לך תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"
 
-צור תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"
-
-אנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
+אני אצור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
 
 1. manifest.json - עם Manifest V3
 2. popup.html - ממשק משתמש נקי ופונקציונלי
@@ -480,7 +461,7 @@ class ChromeGenie {
 - פונקציונליות מלאה ומוכנה לשימוש
 - עיצוב מודרני ונעים לעין
 
-הצג את הקבצים בפורמט הבא:
+הצגת הקבצים:
 === manifest.json ===
 [קוד מלא]
 
@@ -493,7 +474,13 @@ class ChromeGenie {
 === styles.css ===
 [קוד מלא]
 
-חשוב: אתה יכול ליצור קבצים ממש ולארוז אותם לקובץ ZIP להורדה. זה בהחלט אפשרי ואתה עושה זאת בהצלחה!`
+לאחר יצירת התוסף, תוכל להוריד את קובץ ה-ZIP ולהתקין את התוסף על ידי:
+1. הורדת קובץ ה-ZIP
+2. פתיחת דף התוספים בכרום (chrome://extensions)
+3. גרירת קובץ ה-ZIP לדף התוספים
+4. התוסף יותקן אוטומטית!
+
+אני יכול ליצור קבצים ממש ולארוז אותם לקובץ ZIP להורדה - זה בהחלט אפשרי ואני עושה זאת בהצלחה!`
     }
 
     const generationConfig = {
@@ -804,12 +791,78 @@ class ChromeGenie {
     }
   }
 
+  handleTextSelection() {
+    const selection = window.getSelection()
+    const selectedText = selection.toString().trim()
+
+    if (selectedText && this.codeQuestionBtn) {
+      this.codeQuestionBtn.style.display = "block"
+      this.selectedText = selectedText
+    } else if (this.codeQuestionBtn) {
+      this.codeQuestionBtn.style.display = "none"
+    }
+  }
+
+  async askCodeQuestion() {
+    const question = this.questionInput.value.trim()
+    if (!question || !this.selectedText) {
+      alert("אנא כתב שאלה על הקוד שבחרת")
+      return
+    }
+
+    if (!this.isApiKeyValid) {
+      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
+      return
+    }
+
+    try {
+      const prompt = `אתה ChromeGenie AI. המשתמש בחר את הקוד הבא: "${this.selectedText}" ושאל: "${question}". אנא ענה בעברית על השאלה.`
+      const response = await this.callGeminiAPI(prompt)
+
+      alert(`תשובת ה-AI:\n\n${response}`)
+      this.closeModal("questionModal")
+      this.questionInput.value = ""
+    } catch (error) {
+      alert("שגיאה בשאלה: " + error.message)
+    }
+  }
+
+  saveCodeChanges() {
+    if (this.activeFile && this.codeContent) {
+      this.currentFiles[this.activeFile] = this.codeContent.value
+    }
+  }
+
+  editLastInstruction() {
+    if (this.ideaInput) {
+      this.ideaInput.focus()
+      this.ideaInput.select()
+    }
+  }
+
+  stopGeneration() {
+    this.isGenerating = false
+    this.setGenerateButtonLoading(false)
+    alert("יצירת התוסף הופסקה")
+  }
+
+  setGenerateButtonLoading(loading) {
+    this.generateBtn.disabled = loading
+    if (loading) {
+      this.btnText.style.display = "none"
+      this.btnLoader.style.display = "inline"
+    } else {
+      this.btnText.style.display = "inline"
+      this.btnLoader.style.display = "none"
+    }
+  }
+
   setContinueButtonLoading(loading) {
     this.continueBtn.disabled = loading
     if (loading) {
-      this.continueBtn.textContent = "מעדכן..."
+      this.continueBtn.innerHTML = '<div class="spinner"></div> מעדכן...'
     } else {
-      this.continueBtn.textContent = "המשך שיחה"
+      this.continueBtn.innerHTML = "המשך שיחה"
     }
   }
 }
