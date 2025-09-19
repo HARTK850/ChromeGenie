@@ -15,10 +15,16 @@ class ChromeGenie {
 
   loadSettings() {
     const defaultSettings = {
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-flash-exp",
       temperature: 0.7,
       maxTokens: 4096,
+      unlimitedTokens: false,
+      topP: 0.95,
+      topK: 40,
+      responseLanguage: "hebrew",
       autoSaveChats: true,
+      darkMode: false,
+      showAdvancedOptions: false,
     }
     const saved = localStorage.getItem("chromegenie_settings")
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings
@@ -66,8 +72,17 @@ class ChromeGenie {
     this.temperatureSlider = document.getElementById("temperatureSlider")
     this.temperatureValue = document.getElementById("temperatureValue")
     this.maxTokensInput = document.getElementById("maxTokensInput")
+    this.unlimitedTokens = document.getElementById("unlimitedTokens")
+    this.topPSlider = document.getElementById("topPSlider")
+    this.topPValue = document.getElementById("topPValue")
+    this.topKSlider = document.getElementById("topKSlider")
+    this.topKValue = document.getElementById("topKValue")
+    this.responseLanguage = document.getElementById("responseLanguage")
     this.autoSaveChats = document.getElementById("autoSaveChats")
+    this.darkMode = document.getElementById("darkMode")
+    this.showAdvancedOptions = document.getElementById("showAdvancedOptions")
     this.saveSettingsBtn = document.getElementById("saveSettingsBtn")
+    this.resetSettingsBtn = document.getElementById("resetSettingsBtn")
 
     this.chatsList = document.getElementById("chatsList")
     this.allChatsBtn = document.getElementById("allChatsBtn")
@@ -78,12 +93,22 @@ class ChromeGenie {
     this.generateBtn.addEventListener("click", () => this.generateExtension())
     this.downloadBtn.addEventListener("click", () => this.downloadExtension())
 
-    this.historyBtn.addEventListener("click", () => this.openModal("historyModal"))
-    this.apiKeyBtn.addEventListener("click", () => this.openModal("apiKeyModal"))
-    this.settingsBtn.addEventListener("click", () => this.openModal("settingsModal"))
+    this.historyBtn.addEventListener("click", (e) => {
+      e.preventDefault()
+      this.openModal("historyModal")
+    })
+    this.apiKeyBtn.addEventListener("click", (e) => {
+      e.preventDefault()
+      this.openModal("apiKeyModal")
+    })
+    this.settingsBtn.addEventListener("click", (e) => {
+      e.preventDefault()
+      this.openModal("settingsModal")
+    })
 
     document.querySelectorAll(".close-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
+        e.preventDefault()
         this.closeModal(e.target.dataset.modal)
       })
     })
@@ -92,8 +117,29 @@ class ChromeGenie {
     this.apiKeyInput.addEventListener("input", () => this.onApiKeyChange())
 
     this.saveSettingsBtn.addEventListener("click", () => this.saveUserSettings())
+    this.resetSettingsBtn.addEventListener("click", () => this.resetSettings())
+
     this.temperatureSlider.addEventListener("input", (e) => {
       this.temperatureValue.textContent = e.target.value
+    })
+
+    this.topPSlider.addEventListener("input", (e) => {
+      this.topPValue.textContent = e.target.value
+    })
+
+    this.topKSlider.addEventListener("input", (e) => {
+      this.topKValue.textContent = e.target.value
+    })
+
+    this.unlimitedTokens.addEventListener("change", (e) => {
+      this.maxTokensInput.disabled = e.target.checked
+      if (e.target.checked) {
+        this.maxTokensInput.value = ""
+        this.maxTokensInput.placeholder = "ללא הגבלה"
+      } else {
+        this.maxTokensInput.value = 4096
+        this.maxTokensInput.placeholder = ""
+      }
     })
 
     this.allChatsBtn.addEventListener("click", () => this.showAllChats())
@@ -107,15 +153,20 @@ class ChromeGenie {
   }
 
   openModal(modalId) {
+    console.log("[v0] Opening modal:", modalId)
     const modal = document.getElementById(modalId)
-    modal.style.display = "block"
+    if (modal) {
+      modal.style.display = "block"
 
-    if (modalId === "apiKeyModal") {
-      this.loadApiKeyModal()
-    } else if (modalId === "settingsModal") {
-      this.loadSettingsModal()
-    } else if (modalId === "historyModal") {
-      this.loadHistoryModal()
+      if (modalId === "apiKeyModal") {
+        this.loadApiKeyModal()
+      } else if (modalId === "settingsModal") {
+        this.loadSettingsModal()
+      } else if (modalId === "historyModal") {
+        this.loadHistoryModal()
+      }
+    } else {
+      console.error("[v0] Modal not found:", modalId)
     }
   }
 
@@ -139,7 +190,20 @@ class ChromeGenie {
     this.temperatureSlider.value = this.settings.temperature
     this.temperatureValue.textContent = this.settings.temperature
     this.maxTokensInput.value = this.settings.maxTokens
+    this.unlimitedTokens.checked = this.settings.unlimitedTokens
+    this.topPSlider.value = this.settings.topP
+    this.topPValue.textContent = this.settings.topP
+    this.topKSlider.value = this.settings.topK
+    this.topKValue.textContent = this.settings.topK
+    this.responseLanguage.value = this.settings.responseLanguage
     this.autoSaveChats.checked = this.settings.autoSaveChats
+    this.darkMode.checked = this.settings.darkMode
+    this.showAdvancedOptions.checked = this.settings.showAdvancedOptions
+
+    this.maxTokensInput.disabled = this.settings.unlimitedTokens
+    if (this.settings.unlimitedTokens) {
+      this.maxTokensInput.placeholder = "ללא הגבלה"
+    }
   }
 
   loadHistoryModal() {
@@ -215,8 +279,14 @@ class ChromeGenie {
   saveUserSettings() {
     this.settings.model = this.modelSelect.value
     this.settings.temperature = Number.parseFloat(this.temperatureSlider.value)
-    this.settings.maxTokens = Number.parseInt(this.maxTokensInput.value)
+    this.settings.maxTokens = this.unlimitedTokens.checked ? null : Number.parseInt(this.maxTokensInput.value)
+    this.settings.unlimitedTokens = this.unlimitedTokens.checked
+    this.settings.topP = Number.parseFloat(this.topPSlider.value)
+    this.settings.topK = Number.parseInt(this.topKSlider.value)
+    this.settings.responseLanguage = this.responseLanguage.value
     this.settings.autoSaveChats = this.autoSaveChats.checked
+    this.settings.darkMode = this.darkMode.checked
+    this.settings.showAdvancedOptions = this.showAdvancedOptions.checked
 
     this.saveSettings()
 
@@ -224,6 +294,19 @@ class ChromeGenie {
     setTimeout(() => {
       this.saveSettingsBtn.textContent = "שמור הגדרות"
     }, 2000)
+  }
+
+  resetSettings() {
+    if (confirm("האם אתה בטוח שברצונך לאפס את כל ההגדרות?")) {
+      localStorage.removeItem("chromegenie_settings")
+      this.settings = this.loadSettings()
+      this.loadSettingsModal()
+
+      this.resetSettingsBtn.textContent = "אופס ✓"
+      setTimeout(() => {
+        this.resetSettingsBtn.textContent = "איפוס הגדרות"
+      }, 2000)
+    }
   }
 
   async generateExtension() {
@@ -274,34 +357,24 @@ class ChromeGenie {
   }
 
   async callGeminiAPI(idea) {
-    const prompt = `צור תוסף כרום מלא ופונקציונלי על בסיס הרעיון: "${idea}"
+    const languagePrompt =
+      this.settings.responseLanguage === "hebrew"
+        ? "אנא ענה בעברית בלבד."
+        : this.settings.responseLanguage === "english"
+          ? "Please respond in English only."
+          : ""
 
-אנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
+    const prompt = `${languagePrompt}\nצור תוסף כروم מלא ופונקציונלי על בסיס הרעיון: "${idea}"\n\nאנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:\n\n1. manifest.json - עם Manifest V3\n2. popup.html - ממשק משתמש נקי ופונקציונלי\n3. popup.js - כל הלוגיקה הנדרשת\n4. styles.css - עיצוב יפה ומודרני\n\nדרישות:\n- השתמש ב-Manifest V3 בלבד\n- קוד נקי וקריא עם הערות בעברית\n- ממשק משתמש פשוט ואינטואיטיבי\n- פונקציונליות מלאה ומוכנה לשימוש\n- עיצוב מודרני ונעים לעין\n\nהצג את הקבצים בפורמט הבא:\n=== manifest.json ===\n[קוד]\n\n=== popup.html ===\n[קוד]\n\n=== popup.js ===\n[קוד]\n\n=== styles.css ===\n[קוד]`
 
-1. manifest.json - עם Manifest V3
-2. popup.html - ממשק משתמש נקי ופונקציונלי
-3. popup.js - כל הלוגיקה הנדרשת
-4. styles.css - עיצוב יפה ומודרני
+    const generationConfig = {
+      temperature: this.settings.temperature,
+      topP: this.settings.topP,
+      topK: this.settings.topK,
+    }
 
-דרישות:
-- השתמש ב-Manifest V3 בלבד
-- קוד נקי וקריא עם הערות בעברית
-- ממשק משתמש פשוט ואינטואיטיבי
-- פונקציונליות מלאה ומוכנה לשימוש
-- עיצוב מודרני ונעים לעין
-
-הצג את הקבצים בפורמט הבא:
-=== manifest.json ===
-[קוד]
-
-=== popup.html ===
-[קוד]
-
-=== popup.js ===
-[קוד]
-
-=== styles.css ===
-[קוד]`
+    if (!this.settings.unlimitedTokens && this.settings.maxTokens) {
+      generationConfig.maxOutputTokens = this.settings.maxTokens
+    }
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${this.settings.model}:generateContent?key=${this.apiKey}`,
@@ -320,10 +393,7 @@ class ChromeGenie {
               ],
             },
           ],
-          generationConfig: {
-            temperature: this.settings.temperature,
-            maxOutputTokens: this.settings.maxTokens,
-          },
+          generationConfig,
         }),
       },
     )
@@ -338,7 +408,6 @@ class ChromeGenie {
   }
 
   displayAIResponse(response) {
-    // חילוץ החלק הטקסטואלי מהתשובה (לא הקוד)
     const lines = response.split("\n")
     const aiResponse = lines
       .filter(
@@ -351,7 +420,7 @@ class ChromeGenie {
           line.trim() !== "",
       )
       .slice(0, 10)
-      .join("\n") // לוקח רק את השורות הראשונות
+      .join("\n")
 
     this.aiResponseContent.textContent = aiResponse || "התוסף נוצר בהצלחה!"
   }
@@ -360,7 +429,6 @@ class ChromeGenie {
     this.currentFiles = this.parseGeneratedCode(code)
     this.renderFileTabs()
 
-    // הצגת הקובץ הראשון
     const firstFile = Object.keys(this.currentFiles)[0]
     if (firstFile) {
       this.showFile(firstFile)
@@ -380,7 +448,6 @@ class ChromeGenie {
   }
 
   showFile(filename) {
-    // עדכון טאבים
     document.querySelectorAll(".file-tab").forEach((tab) => {
       tab.classList.remove("active")
       if (tab.textContent === filename) {
@@ -388,7 +455,6 @@ class ChromeGenie {
       }
     })
 
-    // הצגת תוכן הקובץ
     this.activeFile = filename
     this.codeContent.textContent = this.currentFiles[filename] || ""
   }
@@ -410,7 +476,6 @@ class ChromeGenie {
   }
 
   generateChatTitle(idea) {
-    // יצירת כותרת חכמה לצ'אט על בסיס הרעיון
     const words = idea.split(" ").slice(0, 4)
     return words.join(" ") + (idea.split(" ").length > 4 ? "..." : "")
   }
@@ -443,7 +508,6 @@ class ChromeGenie {
       )
       .join("")
 
-    // הוספת אירועים לפתיחת צ'אטים
     document.querySelectorAll(".chat-item").forEach((item) => {
       item.addEventListener("click", (e) => {
         if (!e.target.classList.contains("chat-action-btn")) {
@@ -552,7 +616,6 @@ class ChromeGenie {
   }
 }
 
-// הוספת JSZip מ-CDN
 const script = document.createElement("script")
 script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
 script.onload = () => {
