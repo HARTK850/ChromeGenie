@@ -17,7 +17,7 @@ class ChromeGenie {
 
   loadSettings() {
     const defaultSettings = {
-      model: "gemini-1.5-flash", // שינוי המודל البرירת מחדל ל-1.5
+      model: "gemini-2.5-flash",
       temperature: 0.7,
       maxTokens: 4096,
       unlimitedTokens: false,
@@ -57,6 +57,10 @@ class ChromeGenie {
     this.fileTabs = document.getElementById("fileTabs")
     this.codeContent = document.getElementById("codeContent")
     this.downloadBtn = document.getElementById("downloadBtn")
+
+    this.continueChatSection = document.getElementById("continueChatSection")
+    this.continueInput = document.getElementById("continueInput")
+    this.continueBtn = document.getElementById("continueBtn")
 
     this.historyBtn = document.getElementById("historyBtn")
     this.apiKeyBtn = document.getElementById("apiKeyBtn")
@@ -103,6 +107,13 @@ class ChromeGenie {
       this.downloadBtn.addEventListener("click", (e) => {
         e.preventDefault()
         this.downloadExtension()
+      })
+    }
+
+    if (this.continueBtn) {
+      this.continueBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        this.continueChat()
       })
     }
 
@@ -386,6 +397,7 @@ class ChromeGenie {
 
       this.aiResponseSection.style.display = "block"
       this.codeEditorSection.style.display = "block"
+      this.continueChatSection.style.display = "block"
       this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
     } catch (error) {
       console.error("[v0] Error generating extension:", error)
@@ -406,7 +418,7 @@ class ChromeGenie {
     }
   }
 
-  async callGeminiAPI(idea) {
+  async callGeminiAPI(idea, isContinuation = false, previousContext = "") {
     const languagePrompt =
       this.settings.responseLanguage === "hebrew"
         ? "אנא ענה בעברית בלבד."
@@ -414,7 +426,75 @@ class ChromeGenie {
           ? "Please respond in English only."
           : ""
 
-    const prompt = `${languagePrompt}\nצור תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"\n\nאנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:\n\n1. manifest.json - עם Manifest V3\n2. popup.html - ממשק משתמש נקי ופונקציונלי\n3. popup.js - כל הלוגיקה הנדרשת\n4. styles.css - עיצוב יפה ומודרני\n\nדרישות:\n- השתמש ב-Manifest V3 בלבד\n- קוד נקי וקריא עם הערות בעברית\n- ממשק משתמש פשוט ואינטואיטיבי\n- פונקציונליות מלאה ומוכנה לשימוש\n- עיצוב מודרני ונעים לעין\n\nהצג את הקבצים בפורמט הבא:\n=== manifest.json ===\n[קוד]\n\n=== popup.html ===\n[קוד]\n\n=== popup.js ===\n[קוד]\n\n=== styles.css ===\n[קוד]`
+    let prompt
+    if (isContinuation) {
+      prompt = `${languagePrompt}
+
+אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
+
+הקשר הקודם: ${previousContext}
+
+בקשת המשתמש החדשה: ${idea}
+
+אנא עדכן את התוסף לפי הבקשה החדשה. אתה יכול ליצור קבצים חדשים, לערוך קבצים קיימים, או לשנות את הפונקציונליות.
+
+צור את כל הקבצים הנדרשים עם קוד מלא ומוכן לשימוש:
+- manifest.json (Manifest V3)
+- popup.html 
+- popup.js
+- styles.css
+- קבצים נוספים לפי הצורך
+
+הצג את הקבצים בפורמט הבא:
+=== manifest.json ===
+[קוד מלא]
+
+=== popup.html ===
+[קוד מלא]
+
+=== popup.js ===
+[קוד מלא]
+
+=== styles.css ===
+[קוד מלא]
+
+חשוב: אתה יכול ליצור קבצים ממש ולארוז אותם לקובץ ZIP להורדה. זה בהחלט אפשרי ואתה עושה זאת בהצלחה!`
+    } else {
+      prompt = `${languagePrompt}
+
+אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
+
+צור תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"
+
+אנא צור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
+
+1. manifest.json - עם Manifest V3
+2. popup.html - ממשק משתמש נקי ופונקציונלי
+3. popup.js - כל הלוגיקה הנדרשת
+4. styles.css - עיצוב יפה ומודרני
+
+דרישות:
+- השתמש ב-Manifest V3 בלבד
+- קוד נקי וקריא עם הערות בעברית
+- ממשק משתמש פשוט ואינטואיטיבי
+- פונקציונליות מלאה ומוכנה לשימוש
+- עיצוב מודרני ונעים לעין
+
+הצג את הקבצים בפורמט הבא:
+=== manifest.json ===
+[קוד מלא]
+
+=== popup.html ===
+[קוד מלא]
+
+=== popup.js ===
+[קוד מלא]
+
+=== styles.css ===
+[קוד מלא]
+
+חשוב: אתה יכול ליצור קבצים ממש ולארוז אותם לקובץ ZIP להורדה. זה בהחלט אפשרי ואתה עושה זאת בהצלחה!`
+    }
 
     const generationConfig = {
       temperature: this.settings.temperature,
@@ -427,9 +507,25 @@ class ChromeGenie {
     }
 
     let modelToUse = this.settings.model
-    if (modelToUse === "gemini-2.5-flash-exp") {
-      // אם המודל החדש לא זמין, נשתמש במודל יציב
-      modelToUse = "gemini-1.5-flash"
+    if (modelToUse === "gemini-2.5-flash" || modelToUse === "gemini-2.5-flash-exp") {
+      try {
+        const testResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${this.apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: "test" }] }],
+              generationConfig: { maxOutputTokens: 10 },
+            }),
+          },
+        )
+        if (!testResponse.ok) {
+          modelToUse = "gemini-1.5-flash"
+        }
+      } catch {
+        modelToUse = "gemini-1.5-flash"
+      }
     }
 
     const response = await fetch(
@@ -670,6 +766,51 @@ class ChromeGenie {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     })
+  }
+
+  async continueChat() {
+    const continueIdea = this.continueInput.value.trim()
+
+    if (!continueIdea) {
+      alert("אנא כתב מה תרצה לשנות או להוסיף")
+      return
+    }
+
+    if (!this.isApiKeyValid) {
+      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
+      return
+    }
+
+    this.setContinueButtonLoading(true)
+
+    try {
+      const previousContext = `רעיון מקורי: ${this.ideaInput.value}\nתשובה קודמת: ${this.aiResponseContent.textContent}`
+      const response = await this.callGeminiAPI(continueIdea, true, previousContext)
+
+      this.displayAIResponse(response)
+      this.parseAndDisplayCode(response)
+
+      if (this.settings.autoSaveChats) {
+        this.saveCurrentChat(this.ideaInput.value + " + " + continueIdea, response)
+      }
+
+      this.continueInput.value = ""
+      this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
+    } catch (error) {
+      console.error("[v0] Error continuing chat:", error)
+      alert("שגיאה בהמשך השיחה: " + error.message)
+    } finally {
+      this.setContinueButtonLoading(false)
+    }
+  }
+
+  setContinueButtonLoading(loading) {
+    this.continueBtn.disabled = loading
+    if (loading) {
+      this.continueBtn.textContent = "מעדכן..."
+    } else {
+      this.continueBtn.textContent = "המשך שיחה"
+    }
   }
 }
 
