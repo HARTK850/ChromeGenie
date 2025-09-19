@@ -13,7 +13,7 @@ class ChromeGenie {
       this.initializeElements()
       this.bindEvents()
       this.loadSavedApiKey()
-    }, 100)
+    }, 200)
   }
 
   loadSettings() {
@@ -117,15 +117,41 @@ class ChromeGenie {
       })
     }
 
-    if (this.editInstructionBtn) {
-      this.editInstructionBtn.addEventListener("click", (e) => {
+    if (this.historyBtn) {
+      this.historyBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.openModal("historyModal")
+      })
+    }
+
+    if (this.apiKeyBtn) {
+      this.apiKeyBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.openModal("apiKeyModal")
+      })
+    }
+
+    if (this.settingsBtn) {
+      this.settingsBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.openModal("settingsModal")
+      })
+    }
+
+    const editInstructionBtn = document.getElementById("editInstructionBtn")
+    if (editInstructionBtn) {
+      editInstructionBtn.addEventListener("click", (e) => {
         e.preventDefault()
         this.editLastInstruction()
       })
     }
 
-    if (this.stopGenerationBtn) {
-      this.stopGenerationBtn.addEventListener("click", (e) => {
+    const stopGenerationBtn = document.getElementById("stopGenerationBtn")
+    if (stopGenerationBtn) {
+      stopGenerationBtn.addEventListener("click", (e) => {
         e.preventDefault()
         this.stopGeneration()
       })
@@ -142,7 +168,10 @@ class ChromeGenie {
       btn.addEventListener("click", (e) => {
         e.preventDefault()
         e.stopPropagation()
-        this.closeModal(e.target.dataset.modal)
+        const modalId = btn.getAttribute("data-modal")
+        if (modalId) {
+          this.closeModal(modalId)
+        }
       })
     })
 
@@ -171,31 +200,52 @@ class ChromeGenie {
       })
     }
 
-    this.temperatureSlider.addEventListener("input", (e) => {
-      this.temperatureValue.textContent = e.target.value
-    })
+    if (this.temperatureSlider) {
+      this.temperatureSlider.addEventListener("input", (e) => {
+        if (this.temperatureValue) {
+          this.temperatureValue.textContent = e.target.value
+        }
+      })
+    }
 
-    this.topPSlider.addEventListener("input", (e) => {
-      this.topPValue.textContent = e.target.value
-    })
+    if (this.topPSlider) {
+      this.topPSlider.addEventListener("input", (e) => {
+        if (this.topPValue) {
+          this.topPValue.textContent = e.target.value
+        }
+      })
+    }
 
-    this.topKSlider.addEventListener("input", (e) => {
-      this.topKValue.textContent = e.target.value
-    })
+    if (this.topKSlider) {
+      this.topKSlider.addEventListener("input", (e) => {
+        if (this.topKValue) {
+          this.topKValue.textContent = e.target.value
+        }
+      })
+    }
 
-    this.unlimitedTokens.addEventListener("change", (e) => {
-      this.maxTokensInput.disabled = e.target.checked
-      if (e.target.checked) {
-        this.maxTokensInput.value = ""
-        this.maxTokensInput.placeholder = "ללא הגבלה"
-      } else {
-        this.maxTokensInput.value = 4096
-        this.maxTokensInput.placeholder = ""
-      }
-    })
+    if (this.unlimitedTokens) {
+      this.unlimitedTokens.addEventListener("change", (e) => {
+        if (this.maxTokensInput) {
+          this.maxTokensInput.disabled = e.target.checked
+          if (e.target.checked) {
+            this.maxTokensInput.value = ""
+            this.maxTokensInput.placeholder = "ללא הגבלה"
+          } else {
+            this.maxTokensInput.value = 4096
+            this.maxTokensInput.placeholder = ""
+          }
+        }
+      })
+    }
 
-    this.allChatsBtn.addEventListener("click", () => this.showAllChats())
-    this.favoriteChatsBtn.addEventListener("click", () => this.showFavoriteChats())
+    if (this.allChatsBtn) {
+      this.allChatsBtn.addEventListener("click", () => this.showAllChats())
+    }
+
+    if (this.favoriteChatsBtn) {
+      this.favoriteChatsBtn.addEventListener("click", () => this.showFavoriteChats())
+    }
 
     window.addEventListener("click", (e) => {
       if (e.target.classList.contains("modal")) {
@@ -871,14 +921,16 @@ const script = document.createElement("script")
 script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
 script.onload = () => {
   console.log("[v0] JSZip loaded successfully")
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log("[v0] DOM loaded, initializing ChromeGenie")
-      window.chromegenie = new ChromeGenie()
-    })
-  } else {
-    console.log("[v0] DOM already loaded, initializing ChromeGenie")
+
+  const initializeApp = () => {
+    console.log("[v0] Initializing ChromeGenie")
     window.chromegenie = new ChromeGenie()
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeApp)
+  } else {
+    setTimeout(initializeApp, 100)
   }
 }
 script.onerror = () => {
