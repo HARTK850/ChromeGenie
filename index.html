@@ -17,13 +17,13 @@
 
         <main>
             <div class="action-buttons">
-                <button id="historyBtn" class="round-btn medium" title="היסטוריית צ'אטים">
+                <button id="historyBtn" class="round-btn small" title="היסטוריית צ'אטים">
                     📚
                 </button>
-                <button id="apiKeyBtn" class="round-btn medium" title="מפתח API">
+                <button id="apiKeyBtn" class="round-btn small" title="מפתח API">
                     🔑
                 </button>
-                <button id="settingsBtn" class="round-btn medium" title="הגדרות">
+                <button id="settingsBtn" class="round-btn small" title="הגדרות">
                     ⚙️
                 </button>
             </div>
@@ -61,25 +61,19 @@
                     <h3>📝 עורך הקוד</h3>
                     <div class="editor-actions">
                         <button id="downloadBtn" class="action-btn">💾 הורד ZIP</button>
-                        <button id="saveCodeBtn" class="action-btn">💾 שמור שינויים</button>
                         <button id="codeQuestionBtn" class="action-btn" style="display: none;">❓ שאל על הקוד</button>
                     </div>
                 </div>
                 <div class="file-tabs" id="fileTabs"></div>
                 <div class="code-editor" id="codeEditor">
-                    <div id="codeContent" class="code-content"></div>
+                    <textarea id="codeContent" class="code-textarea"></textarea>
                 </div>
             </section>
 
             <section class="continue-chat-section" id="continueChatSection" style="display: none;">
                 <h4>💬 המשך שיחה עם ה-AI</h4>
                 <textarea id="continueInput" class="continue-input" placeholder="מה תרצה לשנות או להוסיף לתוסף? למשל: 'הוסף כפתור לשינוי צבע', 'תקן את הבאג בפונקציה', 'הוסף אפשרות שמירה'..."></textarea>
-                <button id="continueBtn" class="generate-btn">
-                    <span class="continue-text">שלח</span>
-                    <span class="continue-loader" style="display: none;">
-                        <div class="spinner"></div>
-                    </span>
-                </button>
+                <button id="continueBtn" class="generate-btn">המשך שיחה</button>
             </section>
         </main>
     </div>
@@ -130,13 +124,12 @@
                 <div class="setting-group">
                     <label for="modelSelect">מודל AI</label>
                     <select id="modelSelect">
-                        <option value="gemini-2.5-pro">Gemini 2.5 Pro - מתקדם</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash - מומלץ</option>
-                        <option value="gemini-2.5-flash-exp">Gemini 2.5 Flash Experimental - ניסיוני</option>
-                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental - ניסיוני</option>
-                        <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B - קל</option>
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash - יציב</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro - מקצועי</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (מומלץ)</option>
+                        <option value="gemini-2.5-flash-exp">Gemini 2.5 Flash Experimental</option>
+                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Experimental</option>
+                        <option value="gemini-1.5-flash-8b">Gemini 1.5 Flash-8B</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                     </select>
                 </div>
                 <div class="setting-group">
