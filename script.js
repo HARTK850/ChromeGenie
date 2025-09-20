@@ -8,6 +8,7 @@ class ChromeGenie {
     this.currentFiles = {}
     this.activeFile = null
     this.isGenerating = false
+    this.lastGeneratedCode = ""
 
     setTimeout(() => {
       this.initializeElements()
@@ -474,33 +475,14 @@ class ChromeGenie {
 
 בקשת המשתמש החדשה: ${idea}
 
-אני אעדכן את התוסף לפי הבקשה החדשה ואצור את כל הקבצים המעודכנים.
+אני אעדכן את התוסף לפי הבקשה החדשה ואציג את הקבצים המעודכנים בעורך הקוד.
 
-לאחר יצירת התוסף המעודכן, תוכל להוריד את קובץ ה-ZIP החדש ולהתקין את התוסף על ידי:
+לאחר יצירת התוסף המעודכן, תוכל להוריד את קובץ ה-ZIP ולהתקין את התוסף על ידי:
 1. הורדת קובץ ה-ZIP
 2. פתיחת דף התוספים בכרום (chrome://extensions)
 3. גרירת קובץ ה-ZIP לדף התוספים
-4. התוסף יותקן אוטומטית!`
-    } else {
-      prompt = `אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
+4. התוסף יותקן אוטומטית!
 
-בשמחה! אצור לך תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"
-
-אני אצור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
-
-1. manifest.json - עם Manifest V3
-2. popup.html - ממשק משתמש נקי ופונקציונלי
-3. popup.js - כל הלוגיקה הנדרשת
-4. styles.css - עיצוב יפה ומודרני
-
-דרישות:
-- השתמש ב-Manifest V3 בלבד
-- קוד נקי וקריא עם הערות בעברית
-- ממשק משתמש פשוט ואינטואיטיבי
-- פונקציונליות מלאה ומוכנה לשימוש
-- עיצוב מודרני ונעים לעין
-
-הצגת הקבצים:
 === manifest.json ===
 [קוד מלא]
 
@@ -511,7 +493,25 @@ class ChromeGenie {
 [קוד מלא]
 
 === styles.css ===
-[קוד מלא]
+[קוד מלא]`
+    } else {
+      prompt = `אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
+
+בשמחה! אצור לך תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"
+
+אני אצור את הקבצים הבאים עם קוד מלא ומוכן לשימוש ואציג אותם בעורך הקוד:
+
+1. manifest.json - עם Manifest V3
+2. popup.html - ממשק משתמש נקי ופונקציונלי  
+3. popup.js - כל הלוגיקה הנדרשת
+4. styles.css - עיצוב יפה ומודרני
+
+דרישות:
+- השתמש ב-Manifest V3 בלבד
+- קוד נקי וקריא עם הערות בעברית
+- ממשק משתמש פשוט ואינטואיטיבי
+- פונקציונליות מלאה ומוכנה לשימוש
+- עיצוב מודרני ונעים לעין
 
 לאחר יצירת התוסף, תוכל להוריד את קובץ ה-ZIP ולהתקין את התוסף על ידי:
 1. הורדת קובץ ה-ZIP
@@ -519,7 +519,19 @@ class ChromeGenie {
 3. גרירת קובץ ה-ZIP לדף התוספים
 4. התוסף יותקן אוטומטית!
 
-אני יכול ליצור קבצים ממש ולארוז אותם לקובץ ZIP להורדה - זה בהחלט אפשרי ואני עושה זאת בהצלחה!`
+אני יכול ליצור קבצים ממש ולארוז אותם לקובץ ZIP להורדה - זה בהחלט אפשרי ואני עושה זאת בהצלחה!
+
+=== manifest.json ===
+[קוד מלא]
+
+=== popup.html ===
+[קוד מלא]
+
+=== popup.js ===
+[קוד מלא]
+
+=== styles.css ===
+[קוד מלא]`
     }
 
     const generationConfig = {
@@ -597,13 +609,12 @@ class ChromeGenie {
           !line.includes("popup.js") &&
           !line.includes("styles.css") &&
           !line.startsWith("```") &&
-          !line.includes("chrome://extensions") &&
           line.trim() !== "",
       )
       .slice(0, 15)
       .join("\n")
 
-    this.aiResponseContent.textContent = aiResponse || "בשמחה! אצור לך תוסף Chrome מלא ופונקציונלי. התוסף מוכן להורדה!"
+    this.aiResponseContent.textContent = aiResponse || "התוסף נוצר בהצלחה!"
   }
 
   parseAndDisplayCode(code) {
@@ -637,91 +648,142 @@ class ChromeGenie {
     })
 
     this.activeFile = filename
-    this.renderCodeWithHighlighting(this.currentFiles[filename] || "", filename)
+    let content = this.currentFiles[filename] || ""
+
+    content = content.replace(/^```[a-zA-Z]*\n/, "").replace(/\n```$/, "")
+    content = content.replace(/^```---\n/, "").replace(/\n```---$/, "")
+
+    this.codeContent.value = content
+    this.highlightCode()
   }
 
-  renderCodeWithHighlighting(code, filename) {
-    const lines = code.split("\n")
-    const language = this.getLanguageFromFilename(filename)
+  highlightCode() {
+    const content = this.codeContent.value
+    const lines = content.split("\n")
 
-    const highlightedCode = lines
-      .map((line, index) => {
-        const lineNumber = index + 1
-        const highlightedLine = this.highlightSyntax(line, language)
-        return `<div class="code-line">
-        <span class="line-number">${lineNumber}</span>
-        <span class="line-content">${highlightedLine}</span>
-      </div>`
-      })
-      .join("")
-
-    this.codeContent.innerHTML = highlightedCode
-    this.codeContent.contentEditable = true
-    this.codeContent.style.direction = "ltr"
-    this.codeContent.style.textAlign = "left"
-  }
-
-  getLanguageFromFilename(filename) {
-    const ext = filename.split(".").pop().toLowerCase()
-    const langMap = {
-      js: "javascript",
-      json: "json",
-      html: "html",
-      css: "css",
-      txt: "text",
+    const lineNumbers = document.querySelector(".line-numbers")
+    if (lineNumbers) {
+      lineNumbers.innerHTML = lines.map((_, i) => `<span>${i + 1}</span>`).join("")
     }
-    return langMap[ext] || "text"
+
+    const highlightedContent = this.applySyntaxHighlighting(content)
+    const highlightDiv = document.querySelector(".code-highlight")
+    if (highlightDiv) {
+      highlightDiv.innerHTML = highlightedContent
+    }
   }
 
-  highlightSyntax(line, language) {
-    if (language === "javascript") {
-      return line
-        .replace(
-          /\b(const|let|var|function|if|else|for|while|return|true|false|null|undefined)\b/g,
-          '<span class="keyword">$1</span>',
-        )
-        .replace(/"([^"]*)"/g, '<span class="string">"$1"</span>')
-        .replace(/'([^']*)'/g, "<span class=\"string\">'$1'</span>")
-        .replace(/\/\/(.*)$/g, '<span class="comment">//$1</span>')
-        .replace(/\b(\d+)\b/g, '<span class="number">$1</span>')
-    } else if (language === "json") {
-      return line
-        .replace(/"([^"]*)":/g, '<span class="property">"$1"</span>:')
-        .replace(/:\s*"([^"]*)"/g, ': <span class="string">"$1"</span>')
-        .replace(/:\s*(\d+)/g, ': <span class="number">$1</span>')
-        .replace(/:\s*(true|false|null)/g, ': <span class="keyword">$1</span>')
-    } else if (language === "html") {
-      return line
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/&lt;(\/?[a-zA-Z][^&gt;]*)&gt;/g, '<span class="tag">&lt;$1&gt;</span>')
-        .replace(/(\w+)=/g, '<span class="attribute">$1</span>=')
-        .replace(/"([^"]*)"/g, '<span class="string">"$1"</span>')
-    } else if (language === "css") {
-      return line
-        .replace(/([a-zA-Z-]+)\s*:/g, '<span class="property">$1</span>:')
-        .replace(/:\s*([^;]+);/g, ': <span class="value">$1</span>;')
-        .replace(/\/\*(.|\n)*?\*\//g, '<span class="comment">$&</span>')
-        .replace(/\{|\}/g, '<span class="bracket">$&</span>')
+  applySyntaxHighlighting(code) {
+    return code
+      .replace(/(".*?")/g, '<span class="string">$1</span>')
+      .replace(
+        /\b(function|const|let|var|if|else|for|while|return|true|false|null|undefined)\b/g,
+        '<span class="keyword">$1</span>',
+      )
+      .replace(/\b(\d+)\b/g, '<span class="number">$1</span>')
+      .replace(/(\/\/.*$)/gm, '<span class="comment">$1</span>')
+      .replace(/([{}[\]();,.])/g, '<span class="punctuation">$1</span>')
+  }
+
+  setGenerateButtonLoading(loading) {
+    this.generateBtn.disabled = loading
+    const stopBtn = document.getElementById("stopGenerationBtn")
+
+    if (loading) {
+      this.btnText.style.display = "none"
+      this.btnLoader.style.display = "inline"
+      if (stopBtn) stopBtn.style.display = "inline-block"
+    } else {
+      this.btnText.style.display = "inline"
+      this.btnLoader.style.display = "none"
+      if (stopBtn) stopBtn.style.display = "none"
     }
-    return line
+  }
+
+  setContinueButtonLoading(loading) {
+    this.continueBtn.disabled = loading
+    if (loading) {
+      this.continueBtn.innerHTML = '<div class="spinner"></div> שולח...'
+    } else {
+      this.continueBtn.innerHTML = "שלח"
+    }
   }
 
   saveCodeChanges() {
     if (this.activeFile && this.codeContent) {
-      const textContent = this.codeContent.innerText || this.codeContent.textContent
-      this.currentFiles[this.activeFile] = textContent
+      this.currentFiles[this.activeFile] = this.codeContent.value
 
       this.updateAIMemory()
+
+      this.showSaveNotification()
     }
   }
 
   updateAIMemory() {
-    if (this.currentChat) {
-      this.currentChat.files = { ...this.currentFiles }
-      this.saveChats()
+    const updatedContext = Object.entries(this.currentFiles)
+      .map(([filename, content]) => `=== ${filename} ===\n${content}`)
+      .join("\n\n")
+
+    this.lastGeneratedCode = updatedContext
+  }
+
+  showSaveNotification() {
+    const notification = document.createElement("div")
+    notification.className = "save-notification"
+    notification.textContent = "השינויים נשמרו ✓"
+    document.body.appendChild(notification)
+
+    setTimeout(() => {
+      notification.remove()
+    }, 2000)
+  }
+
+  downloadExtension() {
+    try {
+      this.createAndDownloadZip(this.currentFiles)
+    } catch (error) {
+      console.error("[v0] Download failed:", error)
+      alert("שגיאה בהורדה. אנא העתק את הקוד ושמור ידנית.")
     }
+  }
+
+  parseGeneratedCode(code) {
+    const files = {}
+    const sections = code.split(/===\s*([^=]+)\s*===/g)
+
+    for (let i = 1; i < sections.length; i += 2) {
+      const filename = sections[i].trim()
+      const content = sections[i + 1] ? sections[i + 1].trim() : ""
+      if (filename && content) {
+        files[filename] = content
+      }
+    }
+
+    if (Object.keys(files).length === 0) {
+      files["extension-code.txt"] = code
+    }
+
+    return files
+  }
+
+  createAndDownloadZip(files) {
+    const JSZip = window.JSZip
+    const zip = new JSZip()
+
+    Object.entries(files).forEach(([filename, content]) => {
+      zip.file(filename, content)
+    })
+
+    zip.generateAsync({ type: "blob" }).then((content) => {
+      const url = URL.createObjectURL(content)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "chrome-extension.zip"
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    })
   }
 
   async continueChat() {
@@ -904,81 +966,17 @@ class ChromeGenie {
     }
   }
 
-  downloadExtension() {
-    try {
-      this.createAndDownloadZip(this.currentFiles)
-    } catch (error) {
-      console.error("[v0] Download failed:", error)
-      alert("שגיאה בהורדה. אנא העתק את הקוד ושמור ידנית.")
+  editLastInstruction() {
+    if (this.ideaInput) {
+      this.ideaInput.focus()
+      this.ideaInput.select()
     }
-  }
-
-  parseGeneratedCode(code) {
-    const files = {}
-    const sections = code.split(/===\s*([^=]+)\s*===/g)
-
-    for (let i = 1; i < sections.length; i += 2) {
-      const filename = sections[i].trim()
-      const content = sections[i + 1] ? sections[i + 1].trim() : ""
-      if (filename && content) {
-        files[filename] = content
-      }
-    }
-
-    if (Object.keys(files).length === 0) {
-      files["extension-code.txt"] = code
-    }
-
-    return files
-  }
-
-  createAndDownloadZip(files) {
-    const JSZip = window.JSZip
-    const zip = new JSZip()
-
-    Object.entries(files).forEach(([filename, content]) => {
-      zip.file(filename, content)
-    })
-
-    zip.generateAsync({ type: "blob" }).then((content) => {
-      const url = URL.createObjectURL(content)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = "chrome-extension.zip"
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    })
   }
 
   stopGeneration() {
     this.isGenerating = false
     this.setGenerateButtonLoading(false)
     alert("יצירת התוסף הופסקה")
-  }
-
-  setGenerateButtonLoading(loading) {
-    this.generateBtn.disabled = loading
-    const stopBtn = document.getElementById("stopGenerationBtn")
-    if (loading) {
-      this.btnText.style.display = "none"
-      this.btnLoader.style.display = "inline"
-      if (stopBtn) stopBtn.style.display = "inline-block"
-    } else {
-      this.btnText.style.display = "inline"
-      this.btnLoader.style.display = "none"
-      if (stopBtn) stopBtn.style.display = "none"
-    }
-  }
-
-  setContinueButtonLoading(loading) {
-    this.continueBtn.disabled = loading
-    if (loading) {
-      this.continueBtn.innerHTML = '<div class="spinner"></div> מעדכן...'
-    } else {
-      this.continueBtn.innerHTML = "שלח"
-    }
   }
 }
 
