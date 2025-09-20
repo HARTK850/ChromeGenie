@@ -712,16 +712,16 @@ header {
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
+.round-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  background: white;
+}
+
 .round-btn.small {
   width: 45px;
   height: 45px;
   font-size: 1.1rem;
-}
-
-.round-btn.medium {
-  width: 60px;
-  height: 60px;
-  font-size: 1.4rem;
 }
 
 .continue-chat-section {
@@ -761,10 +761,6 @@ header {
 }
 
 .continue-btn {
-  display: none;
-}
-
-#continueBtn {
   width: 100%;
   padding: 1.2rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -779,12 +775,12 @@ header {
   overflow: hidden;
 }
 
-#continueBtn:hover:not(:disabled) {
+.continue-btn:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
 }
 
-#continueBtn:disabled {
+.continue-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
   transform: none;
@@ -797,39 +793,6 @@ header {
   justify-content: center;
 }
 
-#stopGenerationBtn {
-  display: none;
-  background: #e53e3e;
-  color: white;
-  border: none;
-  padding: 0.8rem 1.2rem;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-#stopGenerationBtn:hover {
-  background: #c53030;
-  transform: translateY(-2px);
-}
-
-#editInstructionBtn {
-  background: #667eea;
-  color: white;
-  border: none;
-  padding: 0.8rem 1.2rem;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-#editInstructionBtn:hover {
-  background: #5a67d8;
-  transform: translateY(-2px);
-}
-
 .control-btn {
   padding: 0.8rem 1.2rem;
   background: rgba(255, 255, 255, 0.9);
@@ -840,6 +803,7 @@ header {
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 0.9rem;
+  margin: 0.5rem;
 }
 
 .control-btn:hover {
@@ -848,87 +812,154 @@ header {
   transform: translateY(-2px);
 }
 
-.code-content {
+#stopGenerationBtn {
+  background: #fed7d7;
+  color: #742a2a;
+  border-color: #fc8181;
+}
+
+#stopGenerationBtn:hover {
+  background: #feb2b2;
+  border-color: #f56565;
+}
+
+#editInstructionBtn {
+  background: #e6fffa;
+  color: #234e52;
+  border-color: #81e6d9;
+}
+
+#editInstructionBtn:hover {
+  background: #b2f5ea;
+  border-color: #4fd1c7;
+}
+
+#saveCodeBtn {
+  background: #c6f6d5;
+  color: #22543d;
+  border: 2px solid #9ae6b4;
+}
+
+#saveCodeBtn:hover {
+  background: #9ae6b4;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.code-editor-container {
   background: #1a202c;
-  color: #e2e8f0;
-  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #2d3748;
+  display: flex;
+  position: relative;
+}
+
+.line-numbers {
+  background: #2d3748;
+  color: #718096;
+  padding: 1.5rem 0.8rem;
   font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
   font-size: 0.9rem;
   line-height: 1.5;
-  max-height: 500px;
-  overflow-y: auto;
-  white-space: pre;
-  direction: ltr;
-  text-align: left;
-  border-radius: 12px;
-}
-
-.code-line {
-  display: flex;
-  align-items: flex-start;
-  min-height: 1.5em;
-  padding: 0;
-}
-
-.line-number {
-  background: #2d3748;
-  color: #718096;
-  padding: 0 12px;
   text-align: right;
-  min-width: 50px;
   user-select: none;
   border-right: 1px solid #4a5568;
-  font-weight: 500;
-  flex-shrink: 0;
+  min-width: 50px;
 }
 
-.line-content {
-  padding: 0 16px;
+.line-numbers span {
+  display: block;
+  height: 1.5em;
+}
+
+.code-editor-wrapper {
   flex: 1;
+  position: relative;
+}
+
+.code-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1.5rem;
+  font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
   white-space: pre;
-  overflow-x: auto;
+  overflow: auto;
+  pointer-events: none;
+  color: transparent;
+  background: transparent;
 }
 
-/* צבעי syntax highlighting */
-.keyword {
-  color: #9f7aea;
-  font-weight: 600;
+.code-textarea {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  background: transparent;
+  color: #e2e8f0;
+  padding: 1.5rem;
+  font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  min-height: 400px;
+  border: none;
+  outline: none;
+  resize: none;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow: auto;
 }
 
-.string {
+.code-highlight .string {
   color: #68d391;
 }
 
-.comment {
+.code-highlight .keyword {
+  color: #9f7aea;
+  font-weight: bold;
+}
+
+.code-highlight .number {
+  color: #f6ad55;
+}
+
+.code-highlight .comment {
   color: #718096;
   font-style: italic;
 }
 
-.number {
-  color: #f6ad55;
+.code-highlight .punctuation {
+  color: #cbd5e0;
 }
 
-.property {
-  color: #63b3ed;
+.save-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #48bb78;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  animation: slideInRight 0.3s ease;
 }
 
-.tag {
-  color: #f56565;
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.attribute {
-  color: #fbb6ce;
-}
-
-.value {
-  color: #68d391;
-}
-
-.bracket {
-  color: #fbb6ce;
-}
-
-/* הוספת עיצוב לעיגול מסתובב */
 .spinner {
   width: 20px;
   height: 20px;
@@ -937,7 +968,6 @@ header {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   display: inline-block;
-  margin-right: 8px;
 }
 
 @media (max-width: 768px) {
@@ -964,25 +994,8 @@ header {
     font-size: 1.3rem;
   }
 
-  .round-btn.small {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
-  }
-
-  .round-btn.medium {
-    width: 55px;
-    height: 55px;
-    font-size: 1.3rem;
-  }
-
   header {
     margin-bottom: 2rem;
-  }
-
-  .generation-controls {
-    flex-direction: column;
-    gap: 0.5rem;
   }
 
   .control-btn {
@@ -990,12 +1003,15 @@ header {
     padding: 0.6rem 1rem;
   }
 
-  .line-number {
-    min-width: 40px;
-    padding: 0 8px;
+  .code-editor-container {
+    flex-direction: column;
   }
 
-  .line-content {
-    padding: 0 12px;
+  .line-numbers {
+    display: none;
+  }
+
+  .code-textarea {
+    min-height: 300px;
   }
 }
