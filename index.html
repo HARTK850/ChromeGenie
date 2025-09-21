@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chrobo Ai - צור תוספי כרום בעזרת AI</title>
+    <title>Chrobo Ai - צור תוספי כروم בעזרת AI</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Added JSZip library from CDN to fix ZIP download functionality -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -69,6 +71,11 @@
 
             <section class="continue-chat-section" id="continueChatSection" style="display: none;">
                 <h4>💬 המשך שיחה עם ה-AI</h4>
+                <!-- Added selected text context display area -->
+                <div id="selectedTextContext" class="selected-text-context" style="display: none;">
+                    <div class="context-header">📝 טקסט נבחר:</div>
+                    <div class="context-content" id="selectedTextDisplay"></div>
+                </div>
                 <textarea id="continueInput" class="continue-input" placeholder="מה תרצה לשנות או להוסיף לתוסף? למשל: 'הוסף כפתור לשינוי צבע', 'תקן את הבאג בפונקציה', 'הוסף אפשרות שמירה'..."></textarea>
                 <button id="continueBtn" class="generate-btn">
                     <span class="continue-text">שלח</span>
@@ -165,23 +172,6 @@
                     </label>
                 </div>
                 <button id="saveSettingsBtn" class="save-btn">שמור הגדרות</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="questionModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>❓ שאל על הטקסט</h3>
-                <button class="close-btn" data-modal="questionModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="selected-text-preview" id="selectedTextPreview"></div>
-                <div class="input-group">
-                    <label for="questionInput">מה תרצה לדעת על הטקסט שבחרת?</label>
-                    <textarea id="questionInput" placeholder="למשל: 'מה עושה הפונקציה הזאת?', 'איך אני יכול לשפר את הקוד?', 'מה המשמעות של השורה הזאת?'..."></textarea>
-                </div>
-                <button id="askQuestionBtn" class="save-btn">שאל את ה-AI</button>
             </div>
         </div>
     </div>
