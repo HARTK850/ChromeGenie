@@ -368,6 +368,7 @@ header {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #2d3748;
+  position: relative;
 }
 
 #codeContent {
@@ -378,10 +379,157 @@ header {
   font-size: 0.9rem;
   line-height: 1.5;
   max-height: 500px;
+  overflow: auto;
+  white-space: pre;
+  word-wrap: normal;
+  margin: 0;
+}
+
+#codeContent::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+#codeContent::-webkit-scrollbar-track {
+  background: #2d3748;
+  border-radius: 6px;
+}
+
+#codeContent::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 6px;
+}
+
+#codeContent::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+#codeContent::-webkit-scrollbar-corner {
+  background: #2d3748;
+}
+
+#codeContent pre {
+  margin: 0;
+  white-space: pre;
+  overflow: visible;
+}
+
+#codeContent code {
+  display: block;
+  white-space: pre;
+  overflow: visible;
+  outline: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Added save notification styling */
+.save-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #48bb78;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(72, 187, 120, 0.3);
+  z-index: 1000;
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Added selected text context styling */
+.selected-text-context {
+  background: #e6fffa;
+  border: 2px solid #38b2ac;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.context-header {
+  font-weight: 600;
+  color: #2c7a7b;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.context-content {
+  background: white;
+  padding: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #b2f5ea;
+  font-family: "SF Mono", Monaco, monospace;
+  font-size: 0.85rem;
+  color: #2d3748;
+  max-height: 100px;
   overflow-y: auto;
   white-space: pre-wrap;
-  word-wrap: break-word;
-  margin: 0;
+  word-break: break-word;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Updated text selection popup styling */
+.text-selection-popup {
+  position: absolute;
+  background: #667eea;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  z-index: 1000;
+  animation: popupFadeIn 0.2s ease;
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.selection-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.selection-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .modal {
