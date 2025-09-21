@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChromeGenie - צור תוספי כרום בעזרת AI</title>
+    <title>Chrobo Ai - צור תוספי כרום בעזרת AI</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <div class="logo">
-                <h1 style="text-align: center;">ChromeGenie</h1>
+                <h1 style="text-align: center;">Chrobo Ai</h1>
                 <p style="text-align: center;">צור תוספי Chrome מותאמים אישית בעזרת AI</p>
             </div>
         </header>
@@ -42,11 +42,6 @@
                         <div class="spinner"></div>
                     </span>
                 </button>
-                
-                <div class="generation-controls" style="display: none;">
-                    <button id="stopGenerationBtn" class="control-btn">⏹️ הפסק יצירה</button>
-                    <button id="editInstructionBtn" class="control-btn">✏️ ערוך הנחיה</button>
-                </div>
             </section>
 
             <section class="ai-response-section" id="aiResponseSection" style="display: none;">
@@ -61,13 +56,14 @@
                     <h3>📝 עורך הקוד</h3>
                     <div class="editor-actions">
                         <button id="downloadBtn" class="action-btn">💾 הורד ZIP</button>
-                        <button id="saveCodeBtn" class="action-btn">💾 שמור שינויים</button>
-                        <button id="codeQuestionBtn" class="action-btn" style="display: none;">❓ שאל על הקוד</button>
                     </div>
                 </div>
                 <div class="file-tabs" id="fileTabs"></div>
                 <div class="code-editor" id="codeEditor">
                     <div id="codeContent" class="code-content"></div>
+                </div>
+                <div id="saveNotification" class="save-notification" style="display: none;">
+                    ✅ השינויים נשמרו בהצלחה! (Ctrl+S)
                 </div>
             </section>
 
@@ -169,7 +165,6 @@
                     </label>
                 </div>
                 <button id="saveSettingsBtn" class="save-btn">שמור הגדרות</button>
-                <button id="resetSettingsBtn" class="reset-btn">איפוס הגדרות</button>
             </div>
         </div>
     </div>
@@ -177,17 +172,22 @@
     <div id="questionModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>❓ שאל על הקוד</h3>
+                <h3>❓ שאל על הטקסט</h3>
                 <button class="close-btn" data-modal="questionModal">&times;</button>
             </div>
             <div class="modal-body">
+                <div class="selected-text-preview" id="selectedTextPreview"></div>
                 <div class="input-group">
-                    <label for="questionInput">מה תרצה לדעת על הקוד שבחרת?</label>
+                    <label for="questionInput">מה תרצה לדעת על הטקסט שבחרת?</label>
                     <textarea id="questionInput" placeholder="למשל: 'מה עושה הפונקציה הזאת?', 'איך אני יכול לשפר את הקוד?', 'מה המשמעות של השורה הזאת?'..."></textarea>
                 </div>
                 <button id="askQuestionBtn" class="save-btn">שאל את ה-AI</button>
             </div>
         </div>
+    </div>
+
+    <div id="textSelectionPopup" class="text-selection-popup" style="display: none;">
+        <button id="askAboutSelectionBtn" class="selection-btn">❓ שאל על הטקסט הזה</button>
     </div>
 
     <script src="script.js"></script>
