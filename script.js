@@ -1,73 +1,47 @@
 class ChroboAi {
   constructor() {
     this.apiKey = localStorage.getItem("gemini_api_key") || ""
-    this.isApiKeyValid = localStorage.getItem("api_key_valid") === "true"
-    this.settings = this.loadSettings()
-    this.chats = this.loadChats()
-    this.currentChat = null
-    this.currentFiles = {}
-    this.activeFile = null
+    this.isApiKeyValid = false
     this.isGenerating = false
+    this.currentFiles = {}
     this.selectedText = ""
+    this.currentFileTab = ""
+    this.chatHistory = JSON.parse(localStorage.getItem("chat_history")) || []
 
-    setTimeout(() => {
-      this.initializeElements()
-      this.bindEvents()
-      this.loadSavedApiKey()
-    }, 200)
-  }
-
-  loadSettings() {
-    const defaultSettings = {
-      model: "gemini-2.5-flash",
-      temperature: 0.7,
-      maxTokens: 4096,
-      unlimitedTokens: false,
-      topP: 0.95,
-      topK: 40,
-      autoSaveChats: true,
+    this.settings = {
+      model: localStorage.getItem("ai_model") || "gemini-2.5-flash",
+      temperature: Number.parseFloat(localStorage.getItem("ai_temperature")) || 0.7,
+      maxTokens: Number.parseInt(localStorage.getItem("ai_max_tokens")) || 4096,
+      unlimitedTokens: localStorage.getItem("ai_unlimited_tokens") === "true",
+      topP: Number.parseFloat(localStorage.getItem("ai_top_p")) || 0.95,
+      topK: Number.parseInt(localStorage.getItem("ai_top_k")) || 40,
+      autoSaveChats: localStorage.getItem("auto_save_chats") !== "false",
     }
-    const saved = localStorage.getItem("chrobo_ai_settings")
-    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings
-  }
 
-  loadChats() {
-    const saved = localStorage.getItem("chrobo_ai_chats")
-    return saved ? JSON.parse(saved) : []
-  }
-
-  saveSettings() {
-    localStorage.setItem("chrobo_ai_settings", JSON.stringify(this.settings))
-  }
-
-  saveChats() {
-    localStorage.setItem("chrobo_ai_chats", JSON.stringify(this.chats))
+    this.initializeElements()
+    this.bindEvents()
+    this.validateApiKey()
+    this.loadSettings()
   }
 
   initializeElements() {
     this.ideaInput = document.getElementById("ideaInput")
     this.generateBtn = document.getElementById("generateBtn")
-    this.btnText = document.querySelector(".btn-text")
-    this.btnLoader = document.querySelector(".btn-loader")
-
     this.aiResponseSection = document.getElementById("aiResponseSection")
     this.aiResponseContent = document.getElementById("aiResponseContent")
     this.codeEditorSection = document.getElementById("codeEditorSection")
-    this.fileTabs = document.getElementById("fileTabs")
+    this.codeEditor = document.getElementById("codeEditor")
     this.codeContent = document.getElementById("codeContent")
+    this.fileTabs = document.getElementById("fileTabs")
     this.downloadBtn = document.getElementById("downloadBtn")
-
     this.continueChatSection = document.getElementById("continueChatSection")
     this.continueInput = document.getElementById("continueInput")
     this.continueBtn = document.getElementById("continueBtn")
+    this.saveNotification = document.getElementById("saveNotification")
 
     this.historyBtn = document.getElementById("historyBtn")
     this.apiKeyBtn = document.getElementById("apiKeyBtn")
     this.settingsBtn = document.getElementById("settingsBtn")
-
-    this.historyModal = document.getElementById("historyModal")
-    this.apiKeyModal = document.getElementById("apiKeyModal")
-    this.settingsModal = document.getElementById("settingsModal")
 
     this.apiKeyInput = document.getElementById("apiKeyInput")
     this.saveApiKeyBtn = document.getElementById("saveApiKeyBtn")
@@ -91,235 +65,157 @@ class ChroboAi {
 
     this.textSelectionPopup = document.getElementById("textSelectionPopup")
     this.askAboutSelectionBtn = document.getElementById("askAboutSelectionBtn")
-    this.questionModal = document.getElementById("questionModal")
-    this.questionInput = document.getElementById("questionInput")
-    this.askQuestionBtn = document.getElementById("askQuestionBtn")
-    this.selectedTextPreview = document.getElementById("selectedTextPreview")
-    this.saveNotification = document.getElementById("saveNotification")
+    this.selectedTextContext = document.getElementById("selectedTextContext")
+    this.selectedTextDisplay = document.getElementById("selectedTextDisplay")
   }
 
   bindEvents() {
-    if (this.generateBtn) {
-      this.generateBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.generateExtension()
-      })
-    }
+    this.generateBtn.addEventListener("click", () => this.generateExtension())
+    this.downloadBtn.addEventListener("click", () => this.downloadExtension())
+    this.continueBtn.addEventListener("click", () => this.continueChat())
 
-    if (this.downloadBtn) {
-      this.downloadBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.downloadExtension()
-      })
-    }
+    this.historyBtn.addEventListener("click", () => this.openModal("historyModal"))
+    this.apiKeyBtn.addEventListener("click", () => this.openModal("apiKeyModal"))
+    this.settingsBtn.addEventListener("click", () => this.openModal("settingsModal"))
 
-    if (this.continueBtn) {
-      this.continueBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.continueChat()
-      })
-    }
+    this.saveApiKeyBtn.addEventListener("click", () => this.saveApiKey())
+    this.saveSettingsBtn.addEventListener("click", () => this.saveSettings())
 
-    if (this.historyBtn) {
-      this.historyBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        this.openModal("historyModal")
-      })
-    }
+    this.temperatureSlider.addEventListener("input", (e) => {
+      this.temperatureValue.textContent = e.target.value
+    })
+    this.topPSlider.addEventListener("input", (e) => {
+      this.topPValue.textContent = e.target.value
+    })
+    this.topKSlider.addEventListener("input", (e) => {
+      this.topKValue.textContent = e.target.value
+    })
 
-    if (this.apiKeyBtn) {
-      this.apiKeyBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        this.openModal("apiKeyModal")
-      })
-    }
+    this.allChatsBtn.addEventListener("click", () => this.filterChats("all"))
+    this.favoriteChatsBtn.addEventListener("click", () => this.filterChats("favorites"))
 
-    if (this.settingsBtn) {
-      this.settingsBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        this.openModal("settingsModal")
-      })
-    }
+    document.addEventListener("mouseup", (e) => this.handleTextSelection(e))
+    this.askAboutSelectionBtn.addEventListener("click", () => this.askAboutSelection())
 
-    document.addEventListener("keydown", (e) => {
-      if (e.ctrlKey && e.key === "s") {
-        e.preventDefault()
-        this.saveCodeChanges()
+    document.addEventListener("click", (e) => {
+      if (e.target.classList.contains("close-btn")) {
+        this.closeModal(e.target.dataset.modal)
       }
-    })
-
-    document.addEventListener("mouseup", (e) => {
-      this.handleTextSelection(e)
-    })
-
-    if (this.askAboutSelectionBtn) {
-      this.askAboutSelectionBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.openQuestionModal()
-      })
-    }
-
-    if (this.askQuestionBtn) {
-      this.askQuestionBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.askQuestionAboutSelection()
-      })
-    }
-
-    const editInstructionBtn = document.getElementById("editInstructionBtn")
-    if (editInstructionBtn) {
-      editInstructionBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.editLastInstruction()
-      })
-    }
-
-    const stopGenerationBtn = document.getElementById("stopGenerationBtn")
-    if (stopGenerationBtn) {
-      stopGenerationBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.stopGeneration()
-      })
-    }
-
-    document.querySelectorAll(".close-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        const modalId = btn.getAttribute("data-modal")
-        if (modalId) {
-          this.closeModal(modalId)
-        }
-      })
-    })
-
-    if (this.saveApiKeyBtn) {
-      this.saveApiKeyBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.validateAndSaveApiKey()
-      })
-    }
-
-    if (this.apiKeyInput) {
-      this.apiKeyInput.addEventListener("input", () => this.onApiKeyChange())
-    }
-
-    if (this.saveSettingsBtn) {
-      this.saveSettingsBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.saveUserSettings()
-      })
-    }
-
-    if (this.resetSettingsBtn) {
-      this.resetSettingsBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.resetSettings()
-      })
-    }
-
-    if (this.temperatureSlider) {
-      this.temperatureSlider.addEventListener("input", (e) => {
-        if (this.temperatureValue) {
-          this.temperatureValue.textContent = e.target.value
-        }
-      })
-    }
-
-    if (this.topPSlider) {
-      this.topPSlider.addEventListener("input", (e) => {
-        if (this.topPValue) {
-          this.topPValue.textContent = e.target.value
-        }
-      })
-    }
-
-    if (this.topKSlider) {
-      this.topKSlider.addEventListener("input", (e) => {
-        if (this.topKValue) {
-          this.topKValue.textContent = e.target.value
-        }
-      })
-    }
-
-    if (this.unlimitedTokens) {
-      this.unlimitedTokens.addEventListener("change", (e) => {
-        if (this.maxTokensInput) {
-          this.maxTokensInput.disabled = e.target.checked
-          if (e.target.checked) {
-            this.maxTokensInput.value = ""
-            this.maxTokensInput.placeholder = "ללא הגבלה"
-          } else {
-            this.maxTokensInput.value = 4096
-            this.maxTokensInput.placeholder = ""
-          }
-        }
-      })
-    }
-
-    if (this.allChatsBtn) {
-      this.allChatsBtn.addEventListener("click", () => this.showAllChats())
-    }
-
-    if (this.favoriteChatsBtn) {
-      this.favoriteChatsBtn.addEventListener("click", () => this.showFavoriteChats())
-    }
-
-    window.addEventListener("click", (e) => {
-      if (e.target.classList.contains("modal")) {
-        e.preventDefault()
+      if (e.target.classList.contains("modal") && !e.target.querySelector(".modal-content").contains(e.target)) {
         this.closeModal(e.target.id)
       }
     })
 
-    if (this.codeContent) {
-      this.codeContent.addEventListener("mouseup", () => {
-        this.handleTextSelection()
-      })
-      this.codeContent.addEventListener("input", () => {
-        this.saveCodeChanges()
-      })
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault()
+        this.saveCurrentCode()
+      }
+    })
+
+    this.ideaInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault()
+        this.generateExtension()
+      }
+    })
+
+    this.continueInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault()
+        this.continueChat()
+      }
+    })
+  }
+
+  saveCurrentCode() {
+    if (Object.keys(this.currentFiles).length === 0) {
+      return
     }
+
+    // Update current file content if editing
+    if (this.currentFileTab && this.codeContent.textContent) {
+      this.currentFiles[this.currentFileTab] = this.codeContent.textContent
+    }
+
+    // Show save notification
+    this.saveNotification.style.display = "block"
+    setTimeout(() => {
+      this.saveNotification.style.display = "none"
+    }, 3000)
+
+    console.log("[v0] Files saved:", this.currentFiles)
   }
 
   openModal(modalId) {
     const modal = document.getElementById(modalId)
     if (modal) {
-      modal.style.display = "block"
-
-      if (modalId === "apiKeyModal") {
-        this.loadApiKeyModal()
-      } else if (modalId === "settingsModal") {
-        this.loadSettingsModal()
-      } else if (modalId === "historyModal") {
-        this.loadHistoryModal()
-      } else if (modalId === "questionModal") {
-        this.loadQuestionModal()
+      modal.style.display = "flex"
+      if (modalId === "historyModal") {
+        this.loadChatHistory()
       }
-    } else {
-      console.error("[v0] Modal not found:", modalId)
     }
   }
 
   closeModal(modalId) {
     const modal = document.getElementById(modalId)
-    modal.style.display = "none"
-  }
-
-  loadApiKeyModal() {
-    this.apiKeyInput.value = this.apiKey
-    if (this.isApiKeyValid) {
-      this.showApiStatus("מפתח תקין ✓", "success")
-    } else {
-      this.apiStatus.textContent = ""
-      this.apiStatus.className = "api-status"
+    if (modal) {
+      modal.style.display = "none"
     }
   }
 
-  loadSettingsModal() {
+  async validateApiKey() {
+    if (!this.apiKey) {
+      this.isApiKeyValid = false
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: "test" }] }],
+            generationConfig: { maxOutputTokens: 10 },
+          }),
+        },
+      )
+
+      this.isApiKeyValid = response.ok
+      this.updateApiStatus()
+    } catch (error) {
+      console.error("[v0] API validation error:", error)
+      this.isApiKeyValid = false
+      this.updateApiStatus()
+    }
+  }
+
+  updateApiStatus() {
+    if (this.apiStatus) {
+      if (this.isApiKeyValid) {
+        this.apiStatus.innerHTML = '<span style="color: #4CAF50;">✓ מפתח תקין</span>'
+      } else if (this.apiKey) {
+        this.apiStatus.innerHTML = '<span style="color: #f44336;">✗ מפתח לא תקין</span>'
+      } else {
+        this.apiStatus.innerHTML = '<span style="color: #ff9800;">⚠ לא הוגדר מפתח</span>'
+      }
+    }
+  }
+
+  saveApiKey() {
+    const newApiKey = this.apiKeyInput.value.trim()
+    if (newApiKey) {
+      this.apiKey = newApiKey
+      localStorage.setItem("gemini_api_key", this.apiKey)
+      this.validateApiKey()
+      this.closeModal("apiKeyModal")
+      this.apiKeyInput.value = ""
+    }
+  }
+
+  loadSettings() {
     this.modelSelect.value = this.settings.model
     this.temperatureSlider.value = this.settings.temperature
     this.temperatureValue.textContent = this.settings.temperature
@@ -330,116 +226,56 @@ class ChroboAi {
     this.topKSlider.value = this.settings.topK
     this.topKValue.textContent = this.settings.topK
     this.autoSaveChats.checked = this.settings.autoSaveChats
-
-    this.maxTokensInput.disabled = this.settings.unlimitedTokens
-    if (this.settings.unlimitedTokens) {
-      this.maxTokensInput.placeholder = "ללא הגבלה"
-    }
   }
 
-  loadHistoryModal() {
-    this.renderChatsList()
-  }
-
-  loadQuestionModal() {
-    this.questionInput.value = ""
-  }
-
-  loadSavedApiKey() {}
-
-  onApiKeyChange() {
-    this.isApiKeyValid = false
-    localStorage.removeItem("api_key_valid")
-    this.apiStatus.textContent = ""
-    this.apiStatus.className = "api-status"
-  }
-
-  async validateAndSaveApiKey() {
-    const apiKey = this.apiKeyInput.value.trim()
-
-    if (!apiKey) {
-      this.showApiStatus("אנא הכנס מפתח API", "error")
-      return
-    }
-
-    this.saveApiKeyBtn.disabled = true
-    this.saveApiKeyBtn.textContent = "בודק..."
-
-    try {
-      const testModel = "gemini-1.5-flash"
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: "בדיקה",
-                  },
-                ],
-              },
-            ],
-          }),
-        },
-      )
-
-      if (response.ok) {
-        this.apiKey = apiKey
-        this.isApiKeyValid = true
-        localStorage.setItem("gemini_api_key", apiKey)
-        localStorage.setItem("api_key_valid", "true")
-        this.showApiStatus("מפתח נשמר בהצלחה ✓", "success")
-      } else {
-        throw new Error("מפתח לא תקין")
-      }
-    } catch (error) {
-      console.error("[v0] API key validation error:", error)
-      this.showApiStatus("מפתח לא תקין ✗", "error")
-      this.isApiKeyValid = false
-      localStorage.removeItem("api_key_valid")
-    } finally {
-      this.saveApiKeyBtn.disabled = false
-      this.saveApiKeyBtn.textContent = "שמור מפתח"
-    }
-  }
-
-  showApiStatus(message, type) {
-    this.apiStatus.textContent = message
-    this.apiStatus.className = `api-status ${type}`
-  }
-
-  saveUserSettings() {
+  saveSettings() {
     this.settings.model = this.modelSelect.value
     this.settings.temperature = Number.parseFloat(this.temperatureSlider.value)
-    this.settings.maxTokens = this.unlimitedTokens.checked ? null : Number.parseInt(this.maxTokensInput.value)
+    this.settings.maxTokens = Number.parseInt(this.maxTokensInput.value)
     this.settings.unlimitedTokens = this.unlimitedTokens.checked
     this.settings.topP = Number.parseFloat(this.topPSlider.value)
     this.settings.topK = Number.parseInt(this.topKSlider.value)
     this.settings.autoSaveChats = this.autoSaveChats.checked
 
-    this.saveSettings()
+    localStorage.setItem("ai_model", this.settings.model)
+    localStorage.setItem("ai_temperature", this.settings.temperature)
+    localStorage.setItem("ai_max_tokens", this.settings.maxTokens)
+    localStorage.setItem("ai_unlimited_tokens", this.settings.unlimitedTokens)
+    localStorage.setItem("ai_top_p", this.settings.topP)
+    localStorage.setItem("ai_top_k", this.settings.topK)
+    localStorage.setItem("auto_save_chats", this.settings.autoSaveChats)
 
-    this.saveSettingsBtn.textContent = "נשמר ✓"
-    setTimeout(() => {
-      this.saveSettingsBtn.textContent = "שמור הגדרות"
-    }, 2000)
+    this.closeModal("settingsModal")
+    alert("ההגדרות נשמרו בהצלחה!")
   }
 
-  resetSettings() {
-    if (confirm("האם אתה בטוח שברצונך לאפס את כל ההגדרות?")) {
-      localStorage.removeItem("chrobo_ai_settings")
-      this.settings = this.loadSettings()
-      this.loadSettingsModal()
+  setGenerateButtonLoading(loading) {
+    const btnText = this.generateBtn.querySelector(".btn-text")
+    const btnLoader = this.generateBtn.querySelector(".btn-loader")
 
-      this.resetSettingsBtn.textContent = "אופס ✓"
-      setTimeout(() => {
-        this.resetSettingsBtn.textContent = "איפוס הגדרות"
-      }, 2000)
+    if (loading) {
+      btnText.style.display = "none"
+      btnLoader.style.display = "inline-flex"
+      this.generateBtn.disabled = true
+    } else {
+      btnText.style.display = "inline"
+      btnLoader.style.display = "none"
+      this.generateBtn.disabled = false
+    }
+  }
+
+  setContinueButtonLoading(loading) {
+    const continueText = this.continueBtn.querySelector(".continue-text")
+    const continueLoader = this.continueBtn.querySelector(".continue-loader")
+
+    if (loading) {
+      continueText.style.display = "none"
+      continueLoader.style.display = "inline-flex"
+      this.continueBtn.disabled = true
+    } else {
+      continueText.style.display = "inline"
+      continueLoader.style.display = "none"
+      this.continueBtn.disabled = false
     }
   }
 
@@ -489,68 +325,69 @@ class ChroboAi {
     if (isContinuation) {
       prompt = `אתה Chrobo Ai - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
 
-בשמחה! אעדכן לך את התוסף לפי הבקשה החדשה.
-
 הקשר הקודם: ${previousContext}
 
 בקשת המשתמש החדשה: ${idea}
 
-אני אעדכן את התוסף לפי הבקשה החדשה ואצור את כל הקבצים המעודכנים.
+אנא ספק תשובה מפורטת ומעוצבת יפה עם הוראות ברורות. אל תכלול קוד בתשובה - הקוד יוצג בעורך נפרד.
 
-הוראות התקנה:
-1. הורד את קובץ ה-ZIP
-2. פתח את דף התוספים בכרום (chrome://extensions)
-3. גרור את קובץ ה-ZIP לדף התוספים
-4. התוסף יותקן אוטומטית!
-
-רעיונות להמשך פיתוח:
-- הוספת אפשרויות התאמה אישית נוספות
-- שיפור הביצועים והמהירות
-- הוספת תמיכה בשפות נוספות
-- יצירת ממשק משתמש מתקדם יותר`
+אם יש צורך בשינויי קוד, ספק את הקבצים המעודכנים בפורמט הבא:
+=== שם_קובץ ===
+תוכן הקובץ
+=== סוף_קובץ ===`
     } else {
       prompt = `אתה Chrobo Ai - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
 
-בשמחה! אצור לך תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"
+המשתמש רוצה ליצור תוסף Chrome עם הרעיון הבא: "${idea}"
 
-אני אצור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
+אנא צור תוסף Chrome מלא ופונקציונלי עם Manifest V3. 
 
-1. manifest.json - עם Manifest V3
-2. popup.html - ממשק משתמש נקי ופונקציונלי
-3. popup.js - כל הלוגיקה הנדרשת
-4. styles.css - עיצוב יפה ומודרני
+חשוב מאוד:
+1. אל תכלול קוד בתשובה שלך - הקוד יוצג בעורך נפרד
+2. בתשובה כלול רק: סיכום מה יצרת, הוראות התקנה, ורעיונות להמשך פיתוח
+3. הקוד צריך להיות בפורמט הבא:
+
+=== manifest.json ===
+{
+  "manifest_version": 3,
+  "name": "שם התוסף",
+  "version": "1.0",
+  "description": "תיאור התוסף",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab"]
+}
+=== סוף_קובץ ===
+
+=== popup.html ===
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- HTML content -->
+    <script src="popup.js"></script>
+</body>
+</html>
+=== סוף_קובץ ===
+
+=== popup.js ===
+// JavaScript code
+=== סוף_קובץ ===
+
+=== styles.css ===
+/* CSS styles */
+=== סוף_קובץ ===
 
 דרישות:
 - השתמש ב-Manifest V3 בלבד
-- קוד נקי וקריא עם הערות בעברית
-- ממשק משתמש פשוט ואינטואיטיבי
-- פונקציונליות מלאה ומוכנה לשימוש
-- עיצוב מודרני ונעים לעין
-
-הצגת הקבצים:
-=== manifest.json ===
-[קוד מלא]
-
-=== popup.html ===
-[קוד מלא]
-
-=== popup.js ===
-[קוד מלא]
-
-=== styles.css ===
-[קוד מלא]
-
-הוראות התקנה:
-1. הורד את קובץ ה-ZIP
-2. פתח את דף התוספים בכרום (chrome://extensions)
-3. גרור את קובץ ה-ZIP לדף התוספים
-4. התוסף יותקן אוטומטית!
-
-רעיונות להמשך פיתוח:
-- הוספת אפשרויות התאמה אישית נוספות
-- שיפור הביצועים והמהירות
-- הוספת תמיכה בשפות נוספות
-- יצירת ממשק משתמש מתקדם יותר`
+- קוד נקי עם הערות בעברית
+- ממשק משתמש אינטואיטיבי
+- פונקציונליות מלאה
+- עיצוב מודרני ונעים`
     }
 
     const generationConfig = {
@@ -619,12 +456,12 @@ class ChroboAi {
 
   displayAIResponse(response) {
     const cleanResponse = response
+      .replace(/===[\s\S]*?===/g, "")
       .replace(/```[\s\S]*?```/g, "")
-      .replace(/===.*?===/g, "")
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      .replace(/^\d+\.\s/gm, "• ")
-      .replace(/^-\s/gm, "• ")
+      .replace(/^(\d+\.|-|•)\s/gm, "• ")
+      .replace(/\n\n+/g, "\n\n")
       .trim()
 
     const lines = cleanResponse
@@ -636,10 +473,11 @@ class ChroboAi {
           !line.includes("manifest.json") &&
           !line.includes("popup.html") &&
           !line.includes("popup.js") &&
-          !line.includes("styles.css"),
+          !line.includes("styles.css") &&
+          !line.includes("=== "),
       )
 
-    const finalResponse = lines.slice(0, 20).join("\n")
+    const finalResponse = lines.slice(0, 25).join("\n")
 
     this.aiResponseContent.innerHTML =
       finalResponse ||
@@ -649,6 +487,7 @@ class ChroboAi {
       <strong>הוראות התקנה:</strong><br>
       • הורד את קובץ ה-ZIP<br>
       • פתח את דף התוספים בכרום (chrome://extensions)<br>
+      • הפעל מצב מפתח (Developer mode)<br>
       • גרור את קובץ ה-ZIP לדף התוספים<br>
       • התוסף יותקן אוטומטית!<br><br>
       
@@ -656,7 +495,9 @@ class ChroboAi {
       • הוספת אפשרויות התאמה אישית נוספות<br>
       • שיפור הביצועים והמהירות<br>
       • הוספת תמיכה בשפות נוספות<br>
-      • יצירת ממשק משתמש מתקדם יותר
+      • יצירת ממשק משתמש מתקדם יותר<br><br>
+      
+      <strong>💡 טיפ:</strong> השתמש ב-Ctrl+S כדי לשמור שינויים בעורך הקוד
     `
   }
 
@@ -673,26 +514,31 @@ class ChroboAi {
   parseGeneratedCode(code) {
     const files = {}
 
-    const filePattern = /===\s*([^=]+)\s*===\s*([\s\S]*?)(?====|$)/g
+    // Primary pattern: === filename === content === סוף_קובץ ===
+    const primaryPattern = /===\s*([^=]+?)\s*===\s*([\s\S]*?)(?:===\s*סוף_קובץ\s*===|===\s*[^=]+?\s*===|$)/g
     let match
 
-    while ((match = filePattern.exec(code)) !== null) {
+    while ((match = primaryPattern.exec(code)) !== null) {
       const fileName = match[1].trim()
       let fileContent = match[2].trim()
 
+      // Clean up content
       fileContent = fileContent
         .replace(/^```[\w]*\n?/gm, "")
         .replace(/\n?```$/gm, "")
         .replace(/^---.*$/gm, "")
+        .replace(/===\s*סוף_קובץ\s*===/g, "")
         .trim()
 
-      if (fileName && fileContent) {
+      if (fileName && fileContent && !fileName.includes("סוף_קובץ")) {
         files[fileName] = fileContent
       }
     }
 
+    // Fallback pattern for standard code blocks
     if (Object.keys(files).length === 0) {
-      const fallbackPattern = /(manifest\.json|popup\.html|popup\.js|styles\.css)[\s\S]*?```[\w]*\n?([\s\S]*?)```/g
+      const fallbackPattern =
+        /(manifest\.json|popup\.html|popup\.js|styles\.css|content\.js|background\.js)[\s\S]*?```[\w]*\n?([\s\S]*?)```/g
 
       while ((match = fallbackPattern.exec(code)) !== null) {
         const fileName = match[1]
@@ -709,12 +555,61 @@ class ChroboAi {
       }
     }
 
+    // If still no files found, create default structure
+    if (Object.keys(files).length === 0) {
+      files["manifest.json"] = `{
+  "manifest_version": 3,
+  "name": "Chrobo Extension",
+  "version": "1.0",
+  "description": "תוסף שנוצר על ידי Chrobo Ai",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab"]
+}`
+
+      files["popup.html"] = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Chrobo Extension</h1>
+        <p>התוסף שלך מוכן לשימוש!</p>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>`
+
+      files["popup.js"] = `// תוסף Chrobo Ai
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('התוסף נטען בהצלחה!');
+});`
+
+      files["styles.css"] = `body {
+    width: 300px;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    direction: rtl;
+}
+
+.container {
+    text-align: center;
+}
+
+h1 {
+    color: #4285f4;
+    margin-bottom: 10px;
+}`
+    }
+
     return files
   }
 
   renderFileTabs() {
     this.fileTabs.innerHTML = ""
-
     Object.keys(this.currentFiles).forEach((filename) => {
       const tab = document.createElement("button")
       tab.className = "file-tab"
@@ -725,6 +620,12 @@ class ChroboAi {
   }
 
   showFile(filename) {
+    this.currentFileTab = filename
+    const content = this.currentFiles[filename] || ""
+
+    this.codeContent.innerHTML = `<pre><code contenteditable="true">${this.escapeHtml(content)}</code></pre>`
+
+    // Update active tab
     document.querySelectorAll(".file-tab").forEach((tab) => {
       tab.classList.remove("active")
       if (tab.textContent === filename) {
@@ -732,96 +633,19 @@ class ChroboAi {
       }
     })
 
-    this.activeFile = filename
-    this.renderCodeWithHighlighting(this.currentFiles[filename] || "", filename)
-  }
-
-  renderCodeWithHighlighting(code, filename) {
-    const lines = code.split("\n")
-    const language = this.getLanguageFromFilename(filename)
-
-    const highlightedCode = lines
-      .map((line, index) => {
-        const lineNumber = index + 1
-        const highlightedLine = this.highlightSyntax(line, language)
-        return `<div class="code-line">
-        <span class="line-number">${lineNumber}</span>
-        <span class="line-content">${highlightedLine}</span>
-      </div>`
+    // Update content when edited
+    const editableCode = this.codeContent.querySelector("code")
+    if (editableCode) {
+      editableCode.addEventListener("input", () => {
+        this.currentFiles[filename] = editableCode.textContent
       })
-      .join("")
-
-    this.codeContent.innerHTML = highlightedCode
-    this.codeContent.contentEditable = true
-    this.codeContent.style.direction = "ltr"
-    this.codeContent.style.textAlign = "left"
-  }
-
-  getLanguageFromFilename(filename) {
-    const ext = filename.split(".").pop().toLowerCase()
-    const langMap = {
-      js: "javascript",
-      json: "json",
-      html: "html",
-      css: "css",
-      txt: "text",
-    }
-    return langMap[ext] || "text"
-  }
-
-  highlightSyntax(line, language) {
-    if (language === "javascript") {
-      return line
-        .replace(
-          /\b(const|let|var|function|if|else|for|while|return|true|false|null|undefined)\b/g,
-          '<span class="keyword">$1</span>',
-        )
-        .replace(/"([^"]*)"/g, '<span class="string">"$1"</span>')
-        .replace(/'([^']*)'/g, "<span class=\"string\">'$1'</span>")
-        .replace(/\/\/(.*)$/g, '<span class="comment">//$1</span>')
-        .replace(/\b(\d+)\b/g, '<span class="number">$1</span>')
-    } else if (language === "json") {
-      return line
-        .replace(/"([^"]*)":/g, '<span class="property">"$1"</span>:')
-        .replace(/:\s*"([^"]*)"/g, ': <span class="string">"$1"</span>')
-        .replace(/:\s*(\d+)/g, ': <span class="number">$1</span>')
-        .replace(/:\s*(true|false|null)/g, ': <span class="keyword">$1</span>')
-    } else if (language === "html") {
-      return line
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/&lt;(\/?[a-zA-Z][^&gt;]*)&gt;/g, '<span class="tag">&lt;$1&gt;</span>')
-        .replace(/(\w+)=/g, '<span class="attribute">$1</span>=')
-        .replace(/"([^"]*)"/g, '<span class="string">"$1"</span>')
-    } else if (language === "css") {
-      return line
-        .replace(/([a-zA-Z-]+)\s*:/g, '<span class="property">$1</span>:')
-        .replace(/:\s*([^;]+);/g, ': <span class="value">$1</span>;')
-        .replace(/\/\*(.|\n)*?\*\//g, '<span class="comment">$&</span>')
-        .replace(/\{|\}/g, '<span class="bracket">$&</span>')
-    }
-    return line
-  }
-
-  saveCodeChanges() {
-    if (this.activeFile && this.currentFiles[this.activeFile]) {
-      const currentContent = this.codeContent.textContent || this.codeContent.innerText
-      this.currentFiles[this.activeFile] = currentContent
-
-      this.showSaveNotification()
-
-      this.updateZipData()
     }
   }
 
-  showSaveNotification() {
-    if (this.saveNotification) {
-      this.saveNotification.style.display = "block"
-      setTimeout(() => {
-        this.saveNotification.style.display = "none"
-      }, 3000)
-    }
+  escapeHtml(text) {
+    const div = document.createElement("div")
+    div.textContent = text
+    return div.innerHTML
   }
 
   handleTextSelection(e) {
@@ -829,154 +653,163 @@ class ChroboAi {
     const selectedText = selection.toString().trim()
 
     if (selectedText.length > 0) {
-      this.selectedText = selectedText
-      const range = selection.getRangeAt(0)
-      const rect = range.getBoundingClientRect()
+      // Check if selection is within AI response or code editor
+      const aiResponseArea = this.aiResponseSection.contains(selection.anchorNode)
+      const codeEditorArea = this.codeEditorSection.contains(selection.anchorNode)
 
-      this.textSelectionPopup.style.display = "block"
-      this.textSelectionPopup.style.left = rect.left + "px"
-      this.textSelectionPopup.style.top = rect.bottom + window.scrollY + 5 + "px"
+      if (aiResponseArea || codeEditorArea) {
+        this.selectedText = selectedText
+        const range = selection.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
+
+        this.textSelectionPopup.style.display = "block"
+        this.textSelectionPopup.style.left = rect.left + "px"
+        this.textSelectionPopup.style.top = rect.bottom + window.scrollY + 5 + "px"
+      } else {
+        this.textSelectionPopup.style.display = "none"
+      }
     } else {
       this.textSelectionPopup.style.display = "none"
     }
   }
 
-  openQuestionModal() {
-    this.selectedTextPreview.textContent = this.selectedText
+  askAboutSelection() {
+    this.selectedTextDisplay.textContent = this.selectedText
+    this.selectedTextContext.style.display = "block"
+    this.continueInput.placeholder = "מה תרצה לדעת על הטקסט שבחרת?"
+    this.continueInput.focus()
     this.textSelectionPopup.style.display = "none"
-    this.openModal("questionModal")
+
+    // Scroll to continue chat section
+    this.continueChatSection.scrollIntoView({ behavior: "smooth" })
   }
 
-  async askQuestionAboutSelection() {
-    const question = this.questionInput.value.trim()
-    if (!question) {
-      alert("אנא כתוב שאלה")
+  async continueChat() {
+    const message = this.continueInput.value.trim()
+    if (!message) {
+      alert("אנא כתוב הודעה")
       return
     }
 
+    if (!this.isApiKeyValid) {
+      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
+      return
+    }
+
+    this.setContinueButtonLoading(true)
+
     try {
-      const response = await this.callGeminiAPI(
-        `השאלה שלי על הקוד/טקסט הבא: "${this.selectedText}"\n\nהשאלה: ${question}`,
-        false,
-        "",
-      )
+      let contextualMessage = message
+      if (this.selectedText && this.selectedTextContext.style.display !== "none") {
+        contextualMessage = `בהתבסס על הטקסט הבא: "${this.selectedText}"\n\n${message}`
+        // Hide selected text context after use
+        this.selectedTextContext.style.display = "none"
+        this.selectedText = ""
+      }
+
+      const previousContext = this.aiResponseContent.textContent || ""
+      const response = await this.callGeminiAPI(contextualMessage, true, previousContext)
 
       this.displayAIResponse(response)
-      this.aiResponseSection.style.display = "block"
-      this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
+      this.parseAndDisplayCode(response)
 
-      this.closeModal("questionModal")
-      this.questionInput.value = ""
+      if (this.settings.autoSaveChats) {
+        this.saveCurrentChat(message, response)
+      }
+
+      this.continueInput.value = ""
+      this.continueInput.placeholder =
+        "מה תרצה לשנות או להוסיף לתוסף? למשל: 'הוסף כפתור לשינוי צבע', 'תקן את הבאג בפונקציה', 'הוסף אפשרות שמירה'..."
+      this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
     } catch (error) {
-      alert("שגיאה בשליחת השאלה: " + error.message)
+      console.error("[v0] Error in continue chat:", error)
+      alert("שגיאה בשליחת ההודעה: " + error.message)
+    } finally {
+      this.setContinueButtonLoading(false)
     }
   }
 
-  saveCurrentChat(idea, response) {
-    const chatTitle = this.generateChatTitle(idea)
+  saveCurrentChat(userMessage, aiResponse) {
     const chat = {
       id: Date.now(),
-      title: chatTitle,
-      idea: idea,
-      response: response,
-      files: this.currentFiles,
-      date: new Date().toISOString(),
-      favorite: false,
+      timestamp: new Date().toISOString(),
+      userMessage: userMessage.substring(0, 100) + (userMessage.length > 100 ? "..." : ""),
+      aiResponse: aiResponse.substring(0, 200) + (aiResponse.length > 200 ? "..." : ""),
+      isFavorite: false,
     }
 
-    this.chats.unshift(chat)
-    this.saveChats()
+    this.chatHistory.unshift(chat)
+    if (this.chatHistory.length > 50) {
+      this.chatHistory = this.chatHistory.slice(0, 50)
+    }
+
+    localStorage.setItem("chat_history", JSON.stringify(this.chatHistory))
   }
 
-  generateChatTitle(idea) {
-    const words = idea.split(" ").slice(0, 4)
-    return words.join(" ") + (idea.split(" ").length > 4 ? "..." : "")
+  loadChatHistory() {
+    this.filterChats("all")
   }
 
-  renderChatsList(showFavorites = false) {
-    const chatsToShow = showFavorites ? this.chats.filter((chat) => chat.favorite) : this.chats
+  filterChats(type) {
+    this.allChatsBtn.classList.toggle("active", type === "all")
+    this.favoriteChatsBtn.classList.toggle("active", type === "favorites")
 
-    if (chatsToShow.length === 0) {
+    const filteredChats = type === "favorites" ? this.chatHistory.filter((chat) => chat.isFavorite) : this.chatHistory
+
+    if (filteredChats.length === 0) {
       this.chatsList.innerHTML = '<div class="empty-state">אין צ\'אטים שמורים עדיין</div>'
       return
     }
 
-    this.chatsList.innerHTML = chatsToShow
+    this.chatsList.innerHTML = filteredChats
       .map(
         (chat) => `
-      <div class="chat-item ${chat.favorite ? "favorite" : ""}" data-chat-id="${chat.id}">
-        <div class="chat-actions">
-          <button class="chat-action-btn" onclick="chromegenie.toggleFavorite(${chat.id})">
-            ${chat.favorite ? "⭐" : "☆"}
-          </button>
-          <button class="chat-action-btn" onclick="chromegenie.deleteChat(${chat.id})">
-            🗑️
-          </button>
+        <div class="chat-item" data-id="${chat.id}">
+          <div class="chat-header">
+            <span class="chat-date">${new Date(chat.timestamp).toLocaleDateString("he-IL")}</span>
+            <button class="favorite-btn ${chat.isFavorite ? "active" : ""}" data-id="${chat.id}">
+              ${chat.isFavorite ? "★" : "☆"}
+            </button>
+          </div>
+          <div class="chat-preview">
+            <strong>שאלה:</strong> ${chat.userMessage}
+          </div>
+          <div class="chat-preview">
+            <strong>תשובה:</strong> ${chat.aiResponse}
+          </div>
         </div>
-        <div class="chat-title">${chat.title}</div>
-        <div class="chat-preview">${chat.idea.substring(0, 100)}...</div>
-        <div class="chat-date">${new Date(chat.date).toLocaleDateString("he-IL")}</div>
-      </div>
-    `,
+      `,
       )
       .join("")
 
+    document.querySelectorAll(".favorite-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation()
+        this.toggleFavorite(Number.parseInt(btn.dataset.id))
+      })
+    })
+
     document.querySelectorAll(".chat-item").forEach((item) => {
-      item.addEventListener("click", (e) => {
-        if (!e.target.classList.contains("chat-action-btn")) {
-          const chatId = Number.parseInt(item.dataset.chatId)
-          this.loadChat(chatId)
-        }
+      item.addEventListener("click", () => {
+        this.loadChat(Number.parseInt(item.dataset.id))
       })
     })
   }
 
-  showAllChats() {
-    this.allChatsBtn.classList.add("active")
-    this.favoriteChatsBtn.classList.remove("active")
-    this.renderChatsList(false)
-  }
-
-  showFavoriteChats() {
-    this.favoriteChatsBtn.classList.add("active")
-    this.allChatsBtn.classList.remove("active")
-    this.renderChatsList(true)
-  }
-
   toggleFavorite(chatId) {
-    const chat = this.chats.find((c) => c.id === chatId)
+    const chat = this.chatHistory.find((c) => c.id === chatId)
     if (chat) {
-      chat.favorite = !chat.favorite
-      this.saveChats()
-      this.renderChatsList(this.favoriteChatsBtn.classList.contains("active"))
-    }
-  }
-
-  deleteChat(chatId) {
-    if (confirm("האם אתה בטוח שברצונך למחוק את הצ'אט הזה?")) {
-      this.chats = this.chats.filter((c) => c.id !== chatId)
-      this.saveChats()
-      this.renderChatsList(this.favoriteChatsBtn.classList.contains("active"))
+      chat.isFavorite = !chat.isFavorite
+      localStorage.setItem("chat_history", JSON.stringify(this.chatHistory))
+      this.loadChatHistory()
     }
   }
 
   loadChat(chatId) {
-    const chat = this.chats.find((c) => c.id === chatId)
+    const chat = this.chatHistory.find((c) => c.id === chatId)
     if (chat) {
-      this.ideaInput.value = chat.idea
-      this.currentFiles = chat.files
-      this.displayAIResponse(chat.response)
-      this.renderFileTabs()
-
-      const firstFile = Object.keys(this.currentFiles)[0]
-      if (firstFile) {
-        this.showFile(firstFile)
-      }
-
-      this.aiResponseSection.style.display = "block"
-      this.codeEditorSection.style.display = "block"
+      this.ideaInput.value = chat.userMessage
       this.closeModal("historyModal")
-      this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
     }
   }
 
@@ -990,63 +823,38 @@ class ChroboAi {
   }
 
   createAndDownloadZip(files) {
-    const JSZip = window.JSZip
+    const JSZip = window.JSZip // Declare JSZip variable here
+    if (typeof JSZip === "undefined") {
+      alert("שגיאה: ספריית JSZip לא נטענה. אנא רענן את הדף ונסה שוב.")
+      return
+    }
+
     const zip = new JSZip()
 
     Object.entries(files).forEach(([filename, content]) => {
       zip.file(filename, content)
     })
 
-    zip.generateAsync({ type: "blob" }).then((content) => {
-      const url = URL.createObjectURL(content)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = "chrome-extension.zip"
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    })
-  }
-
-  stopGeneration() {
-    this.isGenerating = false
-    this.setGenerateButtonLoading(false)
-    alert("יצירת התוסף הופסקה")
-  }
-
-  setGenerateButtonLoading(loading) {
-    this.generateBtn.disabled = loading
-    const stopBtn = document.getElementById("stopGenerationBtn")
-    if (loading) {
-      this.btnText.style.display = "none"
-      this.btnLoader.style.display = "inline"
-      if (stopBtn) stopBtn.style.display = "inline-block"
-    } else {
-      this.btnText.style.display = "inline"
-      this.btnLoader.style.display = "none"
-      if (stopBtn) stopBtn.style.display = "none"
-    }
-  }
-
-  setContinueButtonLoading(loading) {
-    this.continueBtn.disabled = loading
-    if (loading) {
-      this.continueBtn.innerHTML = '<div class="spinner"></div> מעדכן...'
-    } else {
-      this.continueBtn.innerHTML = "שלח"
-    }
-  }
-
-  updateZipData() {
-    // Placeholder for future implementation
-  }
-
-  editLastInstruction() {
-    // Placeholder for future implementation
+    zip
+      .generateAsync({ type: "blob" })
+      .then((content) => {
+        const url = URL.createObjectURL(content)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "chrobo-extension.zip"
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      })
+      .catch((error) => {
+        console.error("[v0] ZIP generation failed:", error)
+        alert("שגיאה ביצירת קובץ ZIP. אנא נסה שוב.")
+      })
   }
 }
 
+// Initialize the application
 document.addEventListener("DOMContentLoaded", () => {
-  window.chromegenie = new ChroboAi()
+  new ChroboAi()
 })
