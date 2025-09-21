@@ -279,9 +279,7 @@ class ChroboAi {
       this.codeContent.addEventListener("mouseup", () => {
         this.handleTextSelection()
       })
-      this.codeContent.addEventListener("input", () => {
-        this.saveCodeChanges()
-      })
+      // Removed the 'input' listener for saveCodeChanges to fix issue 4
     }
   }
 
@@ -371,37 +369,22 @@ class ChroboAi {
         `https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${apiKey}`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: "בדיקה",
-                  },
-                ],
-              },
-            ],
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: "test" }] }] }),
         },
       )
 
       if (response.ok) {
-        this.apiKey = apiKey
-        this.isApiKeyValid = true
         localStorage.setItem("gemini_api_key", apiKey)
         localStorage.setItem("api_key_valid", "true")
-        this.showApiStatus("מפתח נשמר בהצלחה ✓", "success")
+        this.apiKey = apiKey
+        this.isApiKeyValid = true
+        this.showApiStatus("מפתח תקין ✓", "success")
       } else {
         throw new Error("מפתח לא תקין")
       }
     } catch (error) {
-      console.error("[v0] API key validation error:", error)
-      this.showApiStatus("מפתח לא תקין ✗", "error")
-      this.isApiKeyValid = false
-      localStorage.removeItem("api_key_valid")
+      this.showApiStatus("שגיאה: " + error.message, "error")
     } finally {
       this.saveApiKeyBtn.disabled = false
       this.saveApiKeyBtn.textContent = "שמור מפתח"
@@ -410,36 +393,28 @@ class ChroboAi {
 
   showApiStatus(message, type) {
     this.apiStatus.textContent = message
-    this.apiStatus.className = `api-status ${type}`
+    this.apiStatus.classList.add(type)
   }
 
   saveUserSettings() {
     this.settings.model = this.modelSelect.value
-    this.settings.temperature = Number.parseFloat(this.temperatureSlider.value)
-    this.settings.maxTokens = this.unlimitedTokens.checked ? null : Number.parseInt(this.maxTokensInput.value)
+    this.settings.temperature = parseFloat(this.temperatureSlider.value)
     this.settings.unlimitedTokens = this.unlimitedTokens.checked
-    this.settings.topP = Number.parseFloat(this.topPSlider.value)
-    this.settings.topK = Number.parseInt(this.topKSlider.value)
+    this.settings.maxTokens = this.settings.unlimitedTokens ? null : parseInt(this.maxTokensInput.value)
+    this.settings.topP = parseFloat(this.topPSlider.value)
+    this.settings.topK = parseInt(this.topKSlider.value)
     this.settings.autoSaveChats = this.autoSaveChats.checked
-
     this.saveSettings()
-
-    this.saveSettingsBtn.textContent = "נשמר ✓"
-    setTimeout(() => {
-      this.saveSettingsBtn.textContent = "שמור הגדרות"
-    }, 2000)
+    alert("ההגדרות נשמרו בהצלחה!")
+    this.closeModal("settingsModal")
   }
 
   resetSettings() {
-    if (confirm("האם אתה בטוח שברצונך לאפס את כל ההגדרות?")) {
+    if (confirm("האם אתה בטוח שברצונך לאפס את ההגדרות?")) {
       localStorage.removeItem("chrobo_ai_settings")
       this.settings = this.loadSettings()
       this.loadSettingsModal()
-
-      this.resetSettingsBtn.textContent = "אופס ✓"
-      setTimeout(() => {
-        this.resetSettingsBtn.textContent = "איפוס הגדרות"
-      }, 2000)
+      alert("ההגדרות אופסו בהצלחה!")
     }
   }
 
@@ -447,170 +422,124 @@ class ChroboAi {
     const idea = this.ideaInput.value.trim()
 
     if (!idea) {
-      alert("אנא תאר את הרעיון שלך לתוסף")
+      alert("אנא תאר את הרעיון שלך")
       return
     }
 
     if (!this.isApiKeyValid) {
-      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
+      alert("אנא הכנס מפתח API תקין")
+      this.openModal("apiKeyModal")
       return
     }
 
-    this.isGenerating = true
     this.setGenerateButtonLoading(true)
+    this.isGenerating = true
 
     try {
-      const response = await this.callGeminiAPI(idea)
-
-      if (!this.isGenerating) return
-
+      const response = await this.callGeminiAPI(idea, true)
       this.displayAIResponse(response)
-      this.parseAndDisplayCode(response)
+      const files = this.parseCodeToFiles(response)
+      this.currentFiles = files
+      this.renderFileTabs()
 
-      if (this.settings.autoSaveChats) {
-        this.saveCurrentChat(idea, response)
+      const firstFile = Object.keys(files)[0]
+      if (firstFile) {
+        this.showFile(firstFile)
       }
 
       this.aiResponseSection.style.display = "block"
       this.codeEditorSection.style.display = "block"
       this.continueChatSection.style.display = "block"
       this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
+
+      if (this.settings.autoSaveChats) {
+        this.saveCurrentChat(idea, response)
+      }
     } catch (error) {
-      console.error("[v0] Error generating extension:", error)
       alert("שגיאה ביצירת התוסף: " + error.message)
     } finally {
-      this.isGenerating = false
       this.setGenerateButtonLoading(false)
+      this.isGenerating = false
     }
   }
 
-  async callGeminiAPI(idea, isContinuation = false, previousContext = "") {
-    let prompt
-    if (isContinuation) {
-      prompt = `אתה Chrobo Ai - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
+  async continueChat() {
+    const additionalInput = this.continueInput.value.trim()
 
-בשמחה! אעדכן לך את התוסף לפי הבקשה החדשה.
-
-הקשר הקודם: ${previousContext}
-
-בקשת המשתמש החדשה: ${idea}
-
-אני אעדכן את התוסף לפי הבקשה החדשה ואצור את כל הקבצים המעודכנים.
-
-הוראות התקנה:
-1. הורד את קובץ ה-ZIP
-2. פתח את דף התוספים בכרום (chrome://extensions)
-3. גרור את קובץ ה-ZIP לדף התוספים
-4. התוסף יותקן אוטומטית!
-
-רעיונות להמשך פיתוח:
-- הוספת אפשרויות התאמה אישית נוספות
-- שיפור הביצועים והמהירות
-- הוספת תמיכה בשפות נוספות
-- יצירת ממשק משתמש מתקדם יותר`
-    } else {
-      prompt = `אתה Chrobo Ai - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
-
-בשמחה! אצור לך תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"
-
-אני אצור את הקבצים הבאים עם קוד מלא ומוכן לשימוש:
-
-1. manifest.json - עם Manifest V3
-2. popup.html - ממשק משתמש נקי ופונקציונלי
-3. popup.js - כל הלוגיקה הנדרשת
-4. styles.css - עיצוב יפה ומודרני
-
-דרישות:
-- השתמש ב-Manifest V3 בלבד
-- קוד נקי וקריא עם הערות בעברית
-- ממשק משתמש פשוט ואינטואיטיבי
-- פונקציונליות מלאה ומוכנה לשימוש
-- עיצוב מודרני ונעים לעין
-
-הצגת הקבצים:
-=== manifest.json ===
-[קוד מלא]
-
-=== popup.html ===
-[קוד מלא]
-
-=== popup.js ===
-[קוד מלא]
-
-=== styles.css ===
-[קוד מלא]
-
-הוראות התקנה:
-1. הורד את קובץ ה-ZIP
-2. פתח את דף התוספים בכרום (chrome://extensions)
-3. גרור את קובץ ה-ZIP לדף התוספים
-4. התוסף יותקן אוטומטית!
-
-רעיונות להמשך פיתוח:
-- הוספת אפשרויות התאמה אישית נוספות
-- שיפור הביצועים והמהירות
-- הוספת תמיכה בשפות נוספות
-- יצירת ממשק משתמש מתקדם יותר`
+    if (!additionalInput) {
+      alert("אנא כתוב הודעה להמשך השיחה")
+      return
     }
 
-    const generationConfig = {
-      temperature: this.settings.temperature,
-      topP: this.settings.topP,
-      topK: this.settings.topK,
+    if (!this.isApiKeyValid) {
+      alert("אנא הכנס מפתח API תקין")
+      this.openModal("apiKeyModal")
+      return
     }
 
-    if (!this.settings.unlimitedTokens && this.settings.maxTokens) {
-      generationConfig.maxOutputTokens = this.settings.maxTokens
-    }
+    this.setContinueButtonLoading(true)
 
-    let modelToUse = this.settings.model
-    if (modelToUse === "gemini-2.5-flash" || modelToUse === "gemini-2.5-flash-exp") {
-      try {
-        const testResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${this.apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: "test" }] }],
-              generationConfig: { maxOutputTokens: 10 },
-            }),
-          },
-        )
-        if (!testResponse.ok) {
-          modelToUse = "gemini-1.5-flash"
-        }
-      } catch {
-        modelToUse = "gemini-1.5-flash"
+    try {
+      const lastResponse = this.aiResponseContent.textContent
+      const prompt = `הרעיון המקורי: ${this.ideaInput.value}\nתשובה קודמת: ${lastResponse}\nהוראות נוספות: ${additionalInput}`
+      const response = await this.callGeminiAPI(prompt, false, additionalInput)
+      this.displayAIResponse(response)
+      const files = this.parseCodeToFiles(response)
+      this.currentFiles = { ...this.currentFiles, ...files }
+      this.renderFileTabs()
+
+      const firstFile = Object.keys(files)[0] || this.activeFile
+      if (firstFile) {
+        this.showFile(firstFile)
       }
+
+      this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
+
+      if (this.settings.autoSaveChats && this.currentChat) {
+        this.currentChat.response += "\n\n" + response
+        this.saveChats()
+      }
+    } catch (error) {
+      alert("שגיאה בהמשך השיחה: " + error.message)
+    } finally {
+      this.setContinueButtonLoading(false)
+      this.continueInput.value = ""
+    }
+  }
+
+  async callGeminiAPI(prompt, isInitial = true, additionalInput = "") {
+    const systemPrompt = `אתה מחולל תוספי Chrome מותאמים אישית. תפקידך: לנתח את הרעיון של המשתמש, לייצר קבצים נפרדים בדיוק בפורמט הבא: === filename.ext ===\n\`\`\`language\ncode here\n\`\`\`
+    - חובה: הפרד כל קובץ בנפרד, אל תשלב תשובה טקסטואלית עם קוד. התחל מיד בקבצים.
+    - יכולות: יצור קבצים כמו manifest.json, background.js, popup.html וכו'. השתמש ב-API של Chrome extensions.
+    - אסור: אל תגיד למשתמש להעתיק/הדביק קוד ידנית - תמיד הנח להוריד ZIP. אל תציע פעולות חיצוניות כמו התקנה או עריכה מחוץ לאתר. התמקד ביצירת תוסף בטוח ותקין.
+    - אם יש עדכונים: עדכן רק קבצים רלוונטיים, שמור על מבנה נפרד.
+    - תשובה: התחל בהסבר קצר (ללא קוד), ואז הקבצים הנפרדים. סיים בהנחיה להוריד ZIP.`;
+
+    const fullPrompt = isInitial ? `${systemPrompt}\n\nרעיון: ${prompt}` : `${systemPrompt}\n\n${prompt}`
+
+    const maxTokens = this.settings.unlimitedTokens ? null : this.settings.maxTokens
+
+    const requestBody = {
+      contents: [{ parts: [{ text: fullPrompt }] }],
+      generationConfig: {
+        temperature: this.settings.temperature,
+        topP: this.settings.topP,
+        topK: this.settings.topK,
+        maxOutputTokens: maxTokens,
+      },
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${this.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${this.settings.model}:generateContent?key=${this.apiKey}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
       },
     )
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      console.error("[v0] API Error:", errorData)
-      throw new Error(errorData.error?.message || "שגיאה בקריאה ל-API של Gemini")
+      throw new Error("תגובה לא תקינה מה-API")
     }
 
     const data = await response.json()
@@ -618,61 +547,11 @@ class ChroboAi {
   }
 
   displayAIResponse(response) {
-    const cleanResponse = response
-      .replace(/```[\s\S]*?```/g, "")
-      .replace(/===.*?===/g, "")
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      .replace(/^\d+\.\s/gm, "• ")
-      .replace(/^-\s/gm, "• ")
-      .trim()
-
-    const lines = cleanResponse
-      .split("\n")
-      .filter(
-        (line) =>
-          line.trim() !== "" &&
-          !line.includes("chrome://extensions") &&
-          !line.includes("manifest.json") &&
-          !line.includes("popup.html") &&
-          !line.includes("popup.js") &&
-          !line.includes("styles.css"),
-      )
-
-    const finalResponse = lines.slice(0, 20).join("\n")
-
-    this.aiResponseContent.innerHTML =
-      finalResponse ||
-      `
-      <strong>בשמחה! יצרתי עבורך תוסף Chrome מלא ופונקציונלי!</strong><br><br>
-      
-      <strong>הוראות התקנה:</strong><br>
-      • הורד את קובץ ה-ZIP<br>
-      • פתח את דף התוספים בכרום (chrome://extensions)<br>
-      • גרור את קובץ ה-ZIP לדף התוספים<br>
-      • התוסף יותקן אוטומטית!<br><br>
-      
-      <strong>רעיונות להמשך פיתוח:</strong><br>
-      • הוספת אפשרויות התאמה אישית נוספות<br>
-      • שיפור הביצועים והמהירות<br>
-      • הוספת תמיכה בשפות נוספות<br>
-      • יצירת ממשק משתמש מתקדם יותר
-    `
+    this.aiResponseContent.textContent = response
   }
 
-  parseAndDisplayCode(code) {
-    this.currentFiles = this.parseGeneratedCode(code)
-    this.renderFileTabs()
-
-    const firstFile = Object.keys(this.currentFiles)[0]
-    if (firstFile) {
-      this.showFile(firstFile)
-    }
-  }
-
-  parseGeneratedCode(code) {
+  parseCodeToFiles(code) {
     const files = {}
-
     const filePattern = /===\s*([^=]+)\s*===\s*([\s\S]*?)(?====|$)/g
     let match
 
@@ -691,8 +570,9 @@ class ChroboAi {
       }
     }
 
+    // Improved fallback: if no === found, try to split by common file names or code blocks
     if (Object.keys(files).length === 0) {
-      const fallbackPattern = /(manifest\.json|popup\.html|popup\.js|styles\.css)[\s\S]*?```[\w]*\n?([\s\S]*?)```/g
+      const fallbackPattern = /(manifest\.json|popup\.html|popup\.js|styles\.css|background\.js|content\.js)[\s\S]*?```[\w]*\n?([\s\S]*?)```/g
 
       while ((match = fallbackPattern.exec(code)) !== null) {
         const fileName = match[1]
@@ -706,6 +586,12 @@ class ChroboAi {
         if (fileName && fileContent) {
           files[fileName] = fileContent
         }
+      }
+
+      // If still empty, assume single file and warn
+      if (Object.keys(files).length === 0 && code.includes("```")) {
+        files["extension.js"] = code.replace(/```[\w]*\n?/g, "").trim() // Fallback to single file
+        console.warn("Fallback to single file due to parsing issue")
       }
     }
 
@@ -829,13 +715,19 @@ class ChroboAi {
     const selectedText = selection.toString().trim()
 
     if (selectedText.length > 0) {
-      this.selectedText = selectedText
-      const range = selection.getRangeAt(0)
-      const rect = range.getBoundingClientRect()
+      const selectionContainer = selection.anchorNode.parentElement
+      if (
+        selectionContainer.closest("#aiResponseContent") ||
+        selectionContainer.closest("#codeContent")
+      ) {
+        this.selectedText = selectedText
+        const range = selection.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
 
-      this.textSelectionPopup.style.display = "block"
-      this.textSelectionPopup.style.left = rect.left + "px"
-      this.textSelectionPopup.style.top = rect.bottom + window.scrollY + 5 + "px"
+        this.textSelectionPopup.style.display = "block"
+        this.textSelectionPopup.style.left = rect.left + "px"
+        this.textSelectionPopup.style.top = rect.bottom + window.scrollY + 5 + "px"
+      }
     } else {
       this.textSelectionPopup.style.display = "none"
     }
