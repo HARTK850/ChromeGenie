@@ -1,4 +1,4 @@
-class ChromeGenie {
+class ChroboAi {
   constructor() {
     this.apiKey = localStorage.getItem("gemini_api_key") || ""
     this.isApiKeyValid = localStorage.getItem("api_key_valid") === "true"
@@ -8,6 +8,7 @@ class ChromeGenie {
     this.currentFiles = {}
     this.activeFile = null
     this.isGenerating = false
+    this.selectedText = ""
 
     setTimeout(() => {
       this.initializeElements()
@@ -26,21 +27,21 @@ class ChromeGenie {
       topK: 40,
       autoSaveChats: true,
     }
-    const saved = localStorage.getItem("chromegenie_settings")
+    const saved = localStorage.getItem("chrobo_ai_settings")
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings
   }
 
   loadChats() {
-    const saved = localStorage.getItem("chromegenie_chats")
+    const saved = localStorage.getItem("chrobo_ai_chats")
     return saved ? JSON.parse(saved) : []
   }
 
   saveSettings() {
-    localStorage.setItem("chromegenie_settings", JSON.stringify(this.settings))
+    localStorage.setItem("chrobo_ai_settings", JSON.stringify(this.settings))
   }
 
   saveChats() {
-    localStorage.setItem("chromegenie_chats", JSON.stringify(this.chats))
+    localStorage.setItem("chrobo_ai_chats", JSON.stringify(this.chats))
   }
 
   initializeElements() {
@@ -83,16 +84,18 @@ class ChromeGenie {
     this.topKValue = document.getElementById("topKValue")
     this.autoSaveChats = document.getElementById("autoSaveChats")
     this.saveSettingsBtn = document.getElementById("saveSettingsBtn")
-    this.resetSettingsBtn = document.getElementById("resetSettingsBtn")
 
     this.chatsList = document.getElementById("chatsList")
     this.allChatsBtn = document.getElementById("allChatsBtn")
     this.favoriteChatsBtn = document.getElementById("favoriteChatsBtn")
 
-    this.codeQuestionBtn = document.getElementById("codeQuestionBtn")
+    this.textSelectionPopup = document.getElementById("textSelectionPopup")
+    this.askAboutSelectionBtn = document.getElementById("askAboutSelectionBtn")
     this.questionModal = document.getElementById("questionModal")
     this.questionInput = document.getElementById("questionInput")
     this.askQuestionBtn = document.getElementById("askQuestionBtn")
+    this.selectedTextPreview = document.getElementById("selectedTextPreview")
+    this.saveNotification = document.getElementById("saveNotification")
   }
 
   bindEvents() {
@@ -141,6 +144,31 @@ class ChromeGenie {
       })
     }
 
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault()
+        this.saveCodeChanges()
+      }
+    })
+
+    document.addEventListener("mouseup", (e) => {
+      this.handleTextSelection(e)
+    })
+
+    if (this.askAboutSelectionBtn) {
+      this.askAboutSelectionBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        this.openQuestionModal()
+      })
+    }
+
+    if (this.askQuestionBtn) {
+      this.askQuestionBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        this.askQuestionAboutSelection()
+      })
+    }
+
     const editInstructionBtn = document.getElementById("editInstructionBtn")
     if (editInstructionBtn) {
       editInstructionBtn.addEventListener("click", (e) => {
@@ -154,13 +182,6 @@ class ChromeGenie {
       stopGenerationBtn.addEventListener("click", (e) => {
         e.preventDefault()
         this.stopGeneration()
-      })
-    }
-
-    if (this.askQuestionBtn) {
-      this.askQuestionBtn.addEventListener("click", (e) => {
-        e.preventDefault()
-        this.askCodeQuestion()
       })
     }
 
@@ -411,7 +432,7 @@ class ChromeGenie {
 
   resetSettings() {
     if (confirm("האם אתה בטוח שברצונך לאפס את כל ההגדרות?")) {
-      localStorage.removeItem("chromegenie_settings")
+      localStorage.removeItem("chrobo_ai_settings")
       this.settings = this.loadSettings()
       this.loadSettingsModal()
 
@@ -466,7 +487,7 @@ class ChromeGenie {
   async callGeminiAPI(idea, isContinuation = false, previousContext = "") {
     let prompt
     if (isContinuation) {
-      prompt = `אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
+      prompt = `אתה Chrobo Ai - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
 
 בשמחה! אעדכן לך את התוסף לפי הבקשה החדשה.
 
@@ -476,13 +497,19 @@ class ChromeGenie {
 
 אני אעדכן את התוסף לפי הבקשה החדשה ואצור את כל הקבצים המעודכנים.
 
-לאחר יצירת התוסף המעודכן, תוכל להוריד את קובץ ה-ZIP החדש ולהתקין את התוסף על ידי:
-1. הורדת קובץ ה-ZIP
-2. פתיחת דף התוספים בכרום (chrome://extensions)
-3. גרירת קובץ ה-ZIP לדף התוספים
-4. התוסף יותקן אוטומטית!`
+הוראות התקנה:
+1. הורד את קובץ ה-ZIP
+2. פתח את דף התוספים בכרום (chrome://extensions)
+3. גרור את קובץ ה-ZIP לדף התוספים
+4. התוסף יותקן אוטומטית!
+
+רעיונות להמשך פיתוח:
+- הוספת אפשרויות התאמה אישית נוספות
+- שיפור הביצועים והמהירות
+- הוספת תמיכה בשפות נוספות
+- יצירת ממשק משתמש מתקדם יותר`
     } else {
-      prompt = `אתה ChromeGenie AI - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
+      prompt = `אתה Chrobo Ai - מומחה ליצירת תוספי Chrome מתקדמים ופונקציונליים.
 
 בשמחה! אצור לך תוסף Chrome מלא ופונקציונלי על בסיס הרעיון: "${idea}"
 
@@ -513,13 +540,17 @@ class ChromeGenie {
 === styles.css ===
 [קוד מלא]
 
-לאחר יצירת התוסף, תוכל להוריד את קובץ ה-ZIP ולהתקין את התוסף על ידי:
-1. הורדת קובץ ה-ZIP
-2. פתיחת דף התוספים בכרום (chrome://extensions)
-3. גרירת קובץ ה-ZIP לדף התוספים
+הוראות התקנה:
+1. הורד את קובץ ה-ZIP
+2. פתח את דף התוספים בכרום (chrome://extensions)
+3. גרור את קובץ ה-ZIP לדף התוספים
 4. התוסף יותקן אוטומטית!
 
-אני יכול ליצור קבצים ממש ולארוז אותם לקובץ ZIP להורדה - זה בהחלט אפשרי ואני עושה זאת בהצלחה!`
+רעיונות להמשך פיתוח:
+- הוספת אפשרויות התאמה אישית נוספות
+- שיפור הביצועים והמהירות
+- הוספת תמיכה בשפות נוספות
+- יצירת ממשק משתמש מתקדם יותר`
     }
 
     const generationConfig = {
@@ -587,23 +618,46 @@ class ChromeGenie {
   }
 
   displayAIResponse(response) {
-    const lines = response.split("\n")
-    const aiResponse = lines
+    const cleanResponse = response
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/===.*?===/g, "")
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/^\d+\.\s/gm, "• ")
+      .replace(/^-\s/gm, "• ")
+      .trim()
+
+    const lines = cleanResponse
+      .split("\n")
       .filter(
         (line) =>
-          !line.startsWith("===") &&
+          line.trim() !== "" &&
+          !line.includes("chrome://extensions") &&
           !line.includes("manifest.json") &&
           !line.includes("popup.html") &&
           !line.includes("popup.js") &&
-          !line.includes("styles.css") &&
-          !line.startsWith("```") &&
-          !line.includes("chrome://extensions") &&
-          line.trim() !== "",
+          !line.includes("styles.css"),
       )
-      .slice(0, 15)
-      .join("\n")
 
-    this.aiResponseContent.textContent = aiResponse || "בשמחה! אצור לך תוסף Chrome מלא ופונקציונלי. התוסף מוכן להורדה!"
+    const finalResponse = lines.slice(0, 20).join("\n")
+
+    this.aiResponseContent.innerHTML =
+      finalResponse ||
+      `
+      <strong>בשמחה! יצרתי עבורך תוסף Chrome מלא ופונקציונלי!</strong><br><br>
+      
+      <strong>הוראות התקנה:</strong><br>
+      • הורד את קובץ ה-ZIP<br>
+      • פתח את דף התוספים בכרום (chrome://extensions)<br>
+      • גרור את קובץ ה-ZIP לדף התוספים<br>
+      • התוסף יותקן אוטומטית!<br><br>
+      
+      <strong>רעיונות להמשך פיתוח:</strong><br>
+      • הוספת אפשרויות התאמה אישית נוספות<br>
+      • שיפור הביצועים והמהירות<br>
+      • הוספת תמיכה בשפות נוספות<br>
+      • יצירת ממשק משתמש מתקדם יותר
+    `
   }
 
   parseAndDisplayCode(code) {
@@ -614,6 +668,48 @@ class ChromeGenie {
     if (firstFile) {
       this.showFile(firstFile)
     }
+  }
+
+  parseGeneratedCode(code) {
+    const files = {}
+
+    const filePattern = /===\s*([^=]+)\s*===\s*([\s\S]*?)(?====|$)/g
+    let match
+
+    while ((match = filePattern.exec(code)) !== null) {
+      const fileName = match[1].trim()
+      let fileContent = match[2].trim()
+
+      fileContent = fileContent
+        .replace(/^```[\w]*\n?/gm, "")
+        .replace(/\n?```$/gm, "")
+        .replace(/^---.*$/gm, "")
+        .trim()
+
+      if (fileName && fileContent) {
+        files[fileName] = fileContent
+      }
+    }
+
+    if (Object.keys(files).length === 0) {
+      const fallbackPattern = /(manifest\.json|popup\.html|popup\.js|styles\.css)[\s\S]*?```[\w]*\n?([\s\S]*?)```/g
+
+      while ((match = fallbackPattern.exec(code)) !== null) {
+        const fileName = match[1]
+        let fileContent = match[2].trim()
+
+        fileContent = fileContent
+          .replace(/^```[\w]*\n?/gm, "")
+          .replace(/\n?```$/gm, "")
+          .trim()
+
+        if (fileName && fileContent) {
+          files[fileName] = fileContent
+        }
+      }
+    }
+
+    return files
   }
 
   renderFileTabs() {
@@ -709,90 +805,70 @@ class ChromeGenie {
   }
 
   saveCodeChanges() {
-    if (this.activeFile && this.codeContent) {
-      const textContent = this.codeContent.innerText || this.codeContent.textContent
-      this.currentFiles[this.activeFile] = textContent
+    if (this.activeFile && this.currentFiles[this.activeFile]) {
+      const currentContent = this.codeContent.textContent || this.codeContent.innerText
+      this.currentFiles[this.activeFile] = currentContent
 
-      this.updateAIMemory()
+      this.showSaveNotification()
+
+      this.updateZipData()
     }
   }
 
-  updateAIMemory() {
-    if (this.currentChat) {
-      this.currentChat.files = { ...this.currentFiles }
-      this.saveChats()
+  showSaveNotification() {
+    if (this.saveNotification) {
+      this.saveNotification.style.display = "block"
+      setTimeout(() => {
+        this.saveNotification.style.display = "none"
+      }, 3000)
     }
   }
 
-  async continueChat() {
-    const continueIdea = this.continueInput.value.trim()
-
-    if (!continueIdea) {
-      alert("אנא כתב מה תרצה לשנות או להוסיף")
-      return
-    }
-
-    if (!this.isApiKeyValid) {
-      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
-      return
-    }
-
-    this.setContinueButtonLoading(true)
-
-    try {
-      const previousContext = `רעיון מקורי: ${this.ideaInput.value}\nתשובה קודמת: ${this.aiResponseContent.textContent}`
-      const response = await this.callGeminiAPI(continueIdea, true, previousContext)
-
-      this.displayAIResponse(response)
-      this.parseAndDisplayCode(response)
-
-      if (this.settings.autoSaveChats) {
-        this.saveCurrentChat(this.ideaInput.value + " + " + continueIdea, response)
-      }
-
-      this.continueInput.value = ""
-      this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
-    } catch (error) {
-      console.error("[v0] Error continuing chat:", error)
-      alert("שגיאה בהמשך השיחה: " + error.message)
-    } finally {
-      this.setContinueButtonLoading(false)
-    }
-  }
-
-  handleTextSelection() {
+  handleTextSelection(e) {
     const selection = window.getSelection()
     const selectedText = selection.toString().trim()
 
-    if (selectedText && this.codeQuestionBtn) {
-      this.codeQuestionBtn.style.display = "block"
+    if (selectedText.length > 0) {
       this.selectedText = selectedText
-    } else if (this.codeQuestionBtn) {
-      this.codeQuestionBtn.style.display = "none"
+      const range = selection.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+
+      this.textSelectionPopup.style.display = "block"
+      this.textSelectionPopup.style.left = rect.left + "px"
+      this.textSelectionPopup.style.top = rect.bottom + window.scrollY + 5 + "px"
+    } else {
+      this.textSelectionPopup.style.display = "none"
     }
   }
 
-  async askCodeQuestion() {
-    const question = this.questionInput.value.trim()
-    if (!question || !this.selectedText) {
-      alert("אנא כתב שאלה על הקוד שבחרת")
-      return
-    }
+  openQuestionModal() {
+    this.selectedTextPreview.textContent = this.selectedText
+    this.textSelectionPopup.style.display = "none"
+    this.openModal("questionModal")
+  }
 
-    if (!this.isApiKeyValid) {
-      alert("אנא הגדר ושמור את מפתח ה-API תחילה")
+  async askQuestionAboutSelection() {
+    const question = this.questionInput.value.trim()
+    if (!question) {
+      alert("אנא כתוב שאלה")
       return
     }
 
     try {
-      const prompt = `אתה ChromeGenie AI. המשתמש בחר את הקוד הבא: "${this.selectedText}" ושאל: "${question}". אנא ענה בעברית על השאלה.`
-      const response = await this.callGeminiAPI(prompt)
+      const response = await this.callGeminiAPI(
+        `השאלה שלי על הקוד/טקסט הבא: "${this.selectedText}"\n\nהשאלה: ${question}`,
+        false,
+        "",
+      )
 
-      alert(`תשובת ה-AI:\n\n${response}`)
+      this.displayAIResponse(response)
+      this.aiResponseSection.style.display = "block"
+      this.aiResponseSection.scrollIntoView({ behavior: "smooth" })
+
       this.closeModal("questionModal")
       this.questionInput.value = ""
     } catch (error) {
-      alert("שגיאה בשאלה: " + error.message)
+      alert("שגיאה בשליחת השאלה: " + error.message)
     }
   }
 
@@ -913,25 +989,6 @@ class ChromeGenie {
     }
   }
 
-  parseGeneratedCode(code) {
-    const files = {}
-    const sections = code.split(/===\s*([^=]+)\s*===/g)
-
-    for (let i = 1; i < sections.length; i += 2) {
-      const filename = sections[i].trim()
-      const content = sections[i + 1] ? sections[i + 1].trim() : ""
-      if (filename && content) {
-        files[filename] = content
-      }
-    }
-
-    if (Object.keys(files).length === 0) {
-      files["extension-code.txt"] = code
-    }
-
-    return files
-  }
-
   createAndDownloadZip(files) {
     const JSZip = window.JSZip
     const zip = new JSZip()
@@ -980,26 +1037,16 @@ class ChromeGenie {
       this.continueBtn.innerHTML = "שלח"
     }
   }
-}
 
-const script = document.createElement("script")
-script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
-script.onload = () => {
-  console.log("[v0] JSZip loaded successfully")
-
-  const initializeApp = () => {
-    console.log("[v0] Initializing ChromeGenie")
-    window.chromegenie = new ChromeGenie()
+  updateZipData() {
+    // Placeholder for future implementation
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializeApp)
-  } else {
-    setTimeout(initializeApp, 100)
+  editLastInstruction() {
+    // Placeholder for future implementation
   }
 }
-script.onerror = () => {
-  console.error("[v0] Failed to load JSZip library")
-  alert("שגיאה בטעינת ספריית JSZip. אנא רענן את הדף.")
-}
-document.head.appendChild(script)
+
+document.addEventListener("DOMContentLoaded", () => {
+  window.chromegenie = new ChroboAi()
+})
